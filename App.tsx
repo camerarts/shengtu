@@ -4,7 +4,7 @@ import { Button } from './components/Button';
 import { HistoryItemCard } from './components/HistoryItem';
 import { SettingsModal } from './components/SettingsModal';
 import { AspectRatio, ImageQuality, HistoryItem } from './types';
-import { ASPECT_RATIOS, QUALITIES, SYNTH_ID_NOTICE, RATIO_LABELS } from './constants';
+import { ASPECT_RATIOS, QUALITIES, SYNTH_ID_NOTICE } from './constants';
 import { generateImageBlob, uploadImageBlob, createThumbnail } from './utils';
 
 const MAX_HISTORY = 20;
