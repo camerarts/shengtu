@@ -21,8 +21,14 @@ function App() {
   
   const [prompt, setPrompt] = useState('');
   const [negativePrompt, setNegativePrompt] = useState('');
-  const [aspectRatio, setAspectRatio] = useState<AspectRatio>(AspectRatio.SQUARE);
-  const [quality, setQuality] = useState<ImageQuality>(ImageQuality.Q_1K);
+  
+  // Initialize from localStorage for persistence
+  const [aspectRatio, setAspectRatio] = useState<AspectRatio>(() => 
+    (localStorage.getItem('gemini_aspect_ratio') as AspectRatio) || AspectRatio.SQUARE
+  );
+  const [quality, setQuality] = useState<ImageQuality>(() => 
+    (localStorage.getItem('gemini_quality') as ImageQuality) || ImageQuality.Q_1K
+  );
   
   // New State for Reference Image
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
@@ -35,6 +41,17 @@ function App() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
   // --- Effects ---
+  
+  // Persist Aspect Ratio
+  useEffect(() => {
+    localStorage.setItem('gemini_aspect_ratio', aspectRatio);
+  }, [aspectRatio]);
+
+  // Persist Quality
+  useEffect(() => {
+    localStorage.setItem('gemini_quality', quality);
+  }, [quality]);
+
   useEffect(() => {
     // Load History
     const savedHistory = localStorage.getItem('gemini_history');
