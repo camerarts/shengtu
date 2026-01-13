@@ -9,6 +9,13 @@
   }
 }
 
+#root {
+  transform: scale(0.75);
+  transform-origin: top center;
+  width: 133.3333%;
+  min-height: 133.3333vh;
+}
+
 .glass-panel {
   background: rgba(20, 20, 25, 0.6);
   backdrop-filter: blur(16px);
