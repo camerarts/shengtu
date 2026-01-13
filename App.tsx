@@ -73,7 +73,11 @@ function App() {
   const saveToHistory = useCallback((newItem: HistoryItem) => {
     setHistory(prev => {
       const updated = [newItem, ...prev].slice(0, MAX_HISTORY);
-      localStorage.setItem('gemini_history', JSON.stringify(updated));
+      try {
+        localStorage.setItem('gemini_history', JSON.stringify(updated));
+      } catch (e) {
+        console.warn("Failed to save history to localStorage (likely quota exceeded).");
+      }
       return updated;
     });
   }, []);
@@ -154,10 +158,12 @@ function App() {
         negativePrompt: negativePrompt.trim() || undefined,
         aspectRatio,
         quality,
-        // Use R2 URL if available, otherwise base64, otherwise fallback
-        thumbnailBase64: successData.base64 || "", 
-        imageUrl: successData.url, // Save the R2 URL
-        referenceImageBase64: referenceImage || undefined,
+        // IMPORTANT: Do NOT save base64 to history if we have a URL.
+        // LocalStorage is limited to ~5MB. A single 1K image is 3MB. A 4K image is 20MB.
+        thumbnailBase64: successData.url ? undefined : successData.base64, 
+        imageUrl: successData.url, 
+        // Do not save reference image to history to save space
+        referenceImageBase64: undefined,
         width: successData.width,
         height: successData.height
       });
@@ -171,18 +177,21 @@ function App() {
 
   const handleDownload = () => {
     if (!result) return;
-    const link = document.createElement('a');
-    // Prefer base64 for download if available as it triggers immediate download
-    // If only URL is available, opening it might be better, but we'll try to download
+    
+    // Prefer URL opening for high-res downloads to avoid base64 blob creation issues
+    if (result.url) {
+        window.open(result.url, '_blank');
+        return;
+    }
+
     if (result.base64) {
+        const link = document.createElement('a');
         link.href = `data:${result.contentType};base64,${result.base64}`;
         link.download = `gemini-3-${Date.now()}.png`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-    } else if (result.url) {
-        window.open(result.url, '_blank');
-    }
+    } 
   };
 
   const restoreHistoryItem = (item: HistoryItem) => {
@@ -194,7 +203,7 @@ function App() {
     
     setResult({
       contentType: 'image/png',
-      base64: item.thumbnailBase64, // Might be empty if we optimized history later
+      base64: item.thumbnailBase64, 
       url: item.imageUrl,
       width: item.width,
       height: item.height
@@ -206,8 +215,8 @@ function App() {
 
   // Helper to determine what source to show
   const getDisplaySource = (res: GenerateImageResponse) => {
-    if (res.base64) return `data:${res.contentType};base64,${res.base64}`;
     if (res.url) return res.url;
+    if (res.base64) return `data:${res.contentType};base64,${res.base64}`;
     return '';
   };
 

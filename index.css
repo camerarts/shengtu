@@ -9,11 +9,10 @@
   }
 }
 
+/* Removed transform: scale(0.75) - This was causing GPU crashes with 4K textures */
 #root {
-  transform: scale(0.75);
-  transform-origin: top center;
-  width: 133.3333%;
-  min-height: 133.3333vh;
+  width: 100%;
+  min-height: 100vh;
 }
 
 .glass-panel {

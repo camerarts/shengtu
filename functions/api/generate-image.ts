@@ -157,18 +157,26 @@ export const onRequestPost = async (context: any) => {
             imageUrl = `${baseUrl}/${filename}`;
         } catch (r2Error: any) {
             console.error("R2 Upload Failed:", r2Error);
-            // We don't fail the request if upload fails, just return base64
+            // We don't fail the request if upload fails, we will fall back to returning base64 below
         }
     }
 
     // 9. Return Success
-    return new Response(JSON.stringify({
-      contentType: "image/png",
-      base64: base64Image, // Still return base64 for immediate display/fallback
-      url: imageUrl,       // Return the R2 URL
-      width,
-      height
-    }), {
+    // PERFORMANCE FIX: If we have an R2 URL, DO NOT send the base64 string back.
+    // A 4K base64 string is ~20MB+. Sending it in JSON crashes the browser (OOM).
+    const responsePayload: any = {
+        contentType: "image/png",
+        url: imageUrl,
+        width,
+        height
+    };
+
+    if (!imageUrl) {
+        // Only return base64 if R2 upload failed or is not configured
+        responsePayload.base64 = base64Image;
+    }
+
+    return new Response(JSON.stringify(responsePayload), {
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
 
