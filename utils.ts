@@ -103,3 +103,67 @@ export async function createThumbnail(blob: Blob, maxWidth = 100): Promise<strin
     img.src = url;
   });
 }
+
+// 4. Split 9-Grid: Splits a blob into 9 object URLs
+export async function splitImageToGrid(blob: Blob): Promise<string[]> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(blob);
+    
+    img.onload = () => {
+      const pieces: string[] = [];
+      const cols = 3;
+      const rows = 3;
+      const pieceWidth = img.width / cols;
+      const pieceHeight = img.height / rows;
+      
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { reject("Canvas error"); return; }
+      
+      canvas.width = pieceWidth;
+      canvas.height = pieceHeight;
+
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          // Clear previous
+          ctx.clearRect(0, 0, pieceWidth, pieceHeight);
+          // Draw sub-region
+          ctx.drawImage(
+            img,
+            x * pieceWidth, y * pieceHeight, pieceWidth, pieceHeight, // Source
+            0, 0, pieceWidth, pieceHeight // Dest
+          );
+          
+          // We use dataURL here for simplicity in this context, 
+          // but for huge images, converting each to Blob + ObjectURL is more memory efficient.
+          // Given the use case, DataURL is acceptable, but let's stick to Blob for consistency if we can,
+          // however, toDataURL is synchronous-ish and easier for "immediate" array return without complex async loops.
+          // Let's use toDataURL for instant React rendering compatibility.
+          pieces.push(canvas.toDataURL('image/png'));
+        }
+      }
+      
+      URL.revokeObjectURL(url);
+      resolve(pieces);
+    };
+    
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
+// 5. Download helper
+export function downloadBatch(images: string[], prefix = 'gemini-grid') {
+  images.forEach((url, index) => {
+    // Add slight delay to prevent browser blocking multiple popups
+    setTimeout(() => {
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${prefix}-${index + 1}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }, index * 200);
+  });
+}

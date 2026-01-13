@@ -5,7 +5,7 @@ import { HistoryItemCard } from './components/HistoryItem';
 import { SettingsModal } from './components/SettingsModal';
 import { AspectRatio, ImageQuality, HistoryItem } from './types';
 import { ASPECT_RATIOS, QUALITIES, SYNTH_ID_NOTICE } from './constants';
-import { generateImageBlob, uploadImageBlob, createThumbnail, formatBytes } from './utils';
+import { generateImageBlob, uploadImageBlob, createThumbnail, formatBytes, splitImageToGrid, downloadBatch } from './utils';
 
 const MAX_HISTORY = 20;
 
@@ -37,6 +37,11 @@ function App() {
     historyId?: string; // To update history later
   } | null>(null);
 
+  // Split View State
+  const [splitImages, setSplitImages] = useState<string[]>([]);
+  const [isSplitView, setIsSplitView] = useState(false);
+  const [processingSplit, setProcessingSplit] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
@@ -51,6 +56,14 @@ function App() {
     const savedKey = localStorage.getItem('gemini_api_key');
     if (savedKey) setApiKey(savedKey);
   }, []);
+
+  // Cleanup split images on unmount or new generation
+  useEffect(() => {
+    return () => {
+      setSplitImages([]);
+      setIsSplitView(false);
+    };
+  }, [currentResult]);
 
   const saveToHistory = useCallback((newItem: HistoryItem) => {
     setHistory(prev => {
@@ -94,6 +107,8 @@ function App() {
     setLoading(true);
     setError(null);
     setCurrentResult(null);
+    setIsSplitView(false);
+    setSplitImages([]);
     const startTime = Date.now();
 
     try {
@@ -171,15 +186,35 @@ function App() {
     document.body.removeChild(link);
   };
 
+  const handleSplitImage = async () => {
+    if (!currentResult || !currentResult.blob) return;
+    setProcessingSplit(true);
+    try {
+        const parts = await splitImageToGrid(currentResult.blob);
+        setSplitImages(parts);
+        setIsSplitView(true);
+    } catch (e) {
+        console.error("Split failed", e);
+        setError("九宫格切割失败");
+    } finally {
+        setProcessingSplit(false);
+    }
+  };
+
+  const handleDownloadAllSplit = () => {
+    if (splitImages.length === 0) return;
+    downloadBatch(splitImages, `gemini-grid-${Date.now()}`);
+  };
+
   const restoreHistoryItem = (item: HistoryItem) => {
     setPrompt(item.prompt);
     setNegativePrompt(item.negativePrompt || '');
     setAspectRatio(item.aspectRatio);
     setQuality(item.quality);
     
-    // For history items, we might not have the Blob anymore (unless we cache it, but page reload clears cache)
-    // If we have Cloud URL, use it. If not, we only have the thumbnail :(
-    // This is a trade-off of "Local First" without Persistent Storage (IndexedDB).
+    // Reset Views
+    setIsSplitView(false);
+    setSplitImages([]);
     
     setCurrentResult({
       blob: new Blob(), // Empty blob, download might fail if not cloud
@@ -210,7 +245,7 @@ function App() {
           </h1>
         </div>
         <div className="flex items-center gap-3">
-           <div className="hidden sm:block px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-mono text-white/50">v3.2-Blob</div>
+           <div className="hidden sm:block px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-mono text-white/50">v3.3-Grid</div>
            <button onClick={() => setShowSettings(true)} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white">
              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
            </button>
@@ -263,75 +298,122 @@ function App() {
             
             {!currentResult && !loading && !error && <div className="text-center space-y-4 opacity-50"><p className="text-white/40 text-sm">输入提示词，开始绘制你的梦境</p></div>}
             
-            {loading && <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/20 backdrop-blur-sm z-10"><div className="w-16 h-16 rounded-full border-t-2 border-r-2 border-indigo-500 animate-spin"></div></div>}
+            {(loading || processingSplit) && <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/20 backdrop-blur-sm z-10"><div className="w-16 h-16 rounded-full border-t-2 border-r-2 border-indigo-500 animate-spin"></div></div>}
 
             {currentResult && (
               <div className="relative w-full h-full flex flex-col">
                 <div className="flex-grow flex items-center justify-center bg-black/40 rounded-2xl overflow-hidden mb-4 border border-white/5 relative group">
-                  <img src={currentResult.cloudUrl || currentResult.localUrl} alt="Result" className="max-h-[600px] w-auto max-w-full object-contain shadow-2xl" />
+                  
+                  {/* View: Split Grid */}
+                  {isSplitView && splitImages.length > 0 ? (
+                    <div className="w-full h-full max-h-[600px] grid grid-cols-3 gap-1 p-1 bg-black/50 overflow-y-auto">
+                        {splitImages.map((src, i) => (
+                            <img key={i} src={src} className="w-full h-full object-cover" alt={`Split ${i}`} />
+                        ))}
+                    </div>
+                  ) : (
+                  // View: Single Image
+                    <img src={currentResult.cloudUrl || currentResult.localUrl} alt="Result" className="max-h-[600px] w-auto max-w-full object-contain shadow-2xl" />
+                  )}
                   
                   {/* Floating Action Bar (HUD) */}
-                  <div className="absolute bottom-4 left-4 right-4 bg-black/70 backdrop-blur-xl border border-white/10 rounded-2xl p-2 flex items-center justify-between shadow-2xl z-20">
+                  <div className="absolute bottom-4 left-4 right-4 bg-black/70 backdrop-blur-xl border border-white/10 rounded-2xl p-2 flex items-center justify-between shadow-2xl z-20 transition-all">
                      
                      {/* Left: Info Chips */}
                      <div className="flex items-center gap-2 pl-2">
-                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/10 border border-white/5 text-[10px] font-mono text-white/90">
-                           <svg className="w-3 h-3 text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
-                           {currentResult.width} x {currentResult.height}
-                        </div>
-                        {currentResult.blob && currentResult.blob.size > 0 && (
+                        {!isSplitView && (
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/10 border border-white/5 text-[10px] font-mono text-white/90">
+                             <svg className="w-3 h-3 text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+                             {currentResult.width} x {currentResult.height}
+                          </div>
+                        )}
+                        {currentResult.blob && currentResult.blob.size > 0 && !isSplitView && (
                           <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/10 border border-white/5 text-[10px] font-mono text-white/90">
                              <svg className="w-3 h-3 text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
                              {formatBytes(currentResult.blob.size)}
                           </div>
                         )}
+                        {isSplitView && (
+                           <div className="text-xs font-semibold text-white/80 px-2">九宫格视图</div>
+                        )}
                      </div>
 
                      {/* Right: Actions */}
                      <div className="flex items-center gap-1.5">
-                         {/* Upload Button */}
-                         {!currentResult.cloudUrl ? (
-                            <button 
-                               onClick={handleUpload} 
-                               disabled={uploading}
-                               className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/30 text-indigo-200 hover:text-white transition-all text-xs font-medium disabled:opacity-50"
-                            >
-                               {uploading ? (
-                                   <svg className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                               ) : (
-                                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-                               )}
-                               <span>{uploading ? '同步中' : '上传'}</span>
-                            </button>
-                         ) : (
-                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-xs font-medium cursor-default">
-                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                                <span>已同步</span>
-                            </div>
+                         
+                         {/* Action Group: Normal View */}
+                         {!isSplitView && (
+                           <>
+                              {/* Upload */}
+                             {!currentResult.cloudUrl ? (
+                                <button 
+                                   onClick={handleUpload} 
+                                   disabled={uploading}
+                                   className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/30 text-indigo-200 hover:text-white transition-all text-xs font-medium disabled:opacity-50"
+                                >
+                                   {uploading ? <span className="animate-spin">C</span> : <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>}
+                                   <span>上传</span>
+                                </button>
+                             ) : (
+                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-xs font-medium cursor-default">
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                    <span>已同步</span>
+                                </div>
+                             )}
+
+                             {/* Split Button */}
+                             <button 
+                                onClick={handleSplitImage}
+                                className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all"
+                                title="九宫格切割"
+                             >
+                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+                             </button>
+
+                             <div className="w-px h-4 bg-white/10 mx-1"></div>
+
+                             {/* Download */}
+                             <button 
+                                 onClick={handleDownload}
+                                 className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all"
+                                 title="下载原图"
+                             >
+                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                             </button>
+                             
+                             {/* Open Link */}
+                             <a 
+                               href={currentResult.cloudUrl || currentResult.localUrl}
+                               target="_blank"
+                               rel="noreferrer"
+                               className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all"
+                               title="在新标签页打开"
+                             >
+                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                             </a>
+                           </>
                          )}
 
-                         {/* Divider */}
-                         <div className="w-px h-4 bg-white/10 mx-1"></div>
-
-                         {/* Download Button */}
-                         <button 
-                             onClick={handleDownload}
-                             className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all"
-                             title="下载原图"
-                         >
-                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                         </button>
-
-                         {/* Open External Link Button */}
-                         <a 
-                           href={currentResult.cloudUrl || currentResult.localUrl}
-                           target="_blank"
-                           rel="noreferrer"
-                           className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all"
-                           title="在新标签页打开"
-                         >
-                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                         </a>
+                         {/* Action Group: Split View */}
+                         {isSplitView && (
+                            <>
+                               <button 
+                                 onClick={handleDownloadAllSplit}
+                                 className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/30 text-indigo-200 hover:text-white transition-all text-xs font-medium"
+                               >
+                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                  <span>一键下载 (9张)</span>
+                               </button>
+                               <div className="w-px h-4 bg-white/10 mx-1"></div>
+                               <button 
+                                 onClick={() => setIsSplitView(false)}
+                                 className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all"
+                                 title="退出九宫格"
+                               >
+                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                               </button>
+                            </>
+                         )}
                      </div>
                   </div>
                 </div>
