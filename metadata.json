@@ -1,0 +1,5 @@
+{
+  "name": "Gemini 3 灵感绘图",
+  "description": "基于 Gemini 3 Pro 的新一代文生图应用，采用玻璃拟态 UI 设计。",
+  "requestFramePermissions": []
+}
