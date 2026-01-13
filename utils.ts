@@ -1,8 +1,8 @@
 import { AspectRatio, ImageQuality } from './types';
 
-// Resolution Logic (Migrated from Worker)
-// Base dimensions for 1K (long edge ~1024), 2K (~2048), 4K (~4096)
-// Short edge calculated by ratio, rounded to nearest 8
+// Resolution Logic (For UI display only)
+// We still calculate this to show the user the approximate dimensions they are getting,
+// even though we send abstract "1K"/"2K" to the API.
 export function getDimensions(aspectRatio: AspectRatio, quality: ImageQuality): { width: number; height: number } {
   const map: Record<string, Record<string, { w: number; h: number }>> = {
     "1:1": {
@@ -44,6 +44,23 @@ export function getDimensions(aspectRatio: AspectRatio, quality: ImageQuality): 
   return { width: dim.w, height: dim.h };
 }
 
+// Map UI aspect ratios to Gemini 3 Pro supported ratios
+// Supported: "1:1", "3:4", "4:3", "9:16", "16:9"
+function getSupportedAspectRatio(ratio: AspectRatio): string {
+  switch (ratio) {
+    case AspectRatio.PORTRAIT_2_3:
+    case AspectRatio.PORTRAIT_4_5:
+      return "3:4"; // Closest vertical match
+    case AspectRatio.LANDSCAPE_3_2:
+    case AspectRatio.LANDSCAPE_5_4:
+      return "4:3"; // Closest horizontal match
+    case AspectRatio.CINEMATIC_21_9:
+      return "16:9"; // Closest wide match
+    default:
+      return ratio; // 1:1, 3:4, 4:3, 9:16, 16:9 are natively supported
+  }
+}
+
 export async function generateImageDirectly(
   apiKey: string,
   prompt: string,
@@ -77,23 +94,26 @@ export async function generateImageDirectly(
     }
   }
 
+  // Correct Payload Structure for gemini-3-pro-image-preview
+  // 1. safetySettings must be at root
+  // 2. config uses imageConfig with imageSize (not mediaResolution)
+  // 3. Do not set responseMimeType in generationConfig for this model
   const payload = {
     contents: [{
       parts: parts
     }],
     generationConfig: {
-      responseMimeType: "image/png",
-      mediaResolution: {
-           width: width,
-           height: height
-      },
-      safetySettings: [
-          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
-          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
-          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH" },
-          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" }
-      ]
-    }
+      imageConfig: {
+        aspectRatio: getSupportedAspectRatio(aspectRatio),
+        imageSize: quality // "1K", "2K", "4K"
+      }
+    },
+    safetySettings: [
+        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
+        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
+        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH" },
+        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" }
+    ]
   };
 
   const response = await fetch(url, {
@@ -120,7 +140,8 @@ export async function generateImageDirectly(
   }
 
   const data: any = await response.json();
-  const part = data.candidates?.[0]?.content?.parts?.[0];
+  // Image parts might be mixed with text parts, find the inlineData
+  const part = data.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData);
   
   if (!part || !part.inlineData || !part.inlineData.data) {
        throw new Error('API 返回数据格式异常，未找到图片。');
