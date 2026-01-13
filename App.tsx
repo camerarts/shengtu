@@ -302,10 +302,10 @@ function App() {
                        <button
                          key={ratio}
                          onClick={() => setAspectRatio(ratio)}
-                         className={`flex flex-col items-center justify-center gap-2 py-3 rounded-lg text-xs font-medium transition-all border ${
+                         className={`flex flex-col items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold transition-all duration-200 border ${
                            aspectRatio === ratio
-                             ? 'bg-indigo-500/20 border-indigo-500 text-white shadow-[0_0_10px_rgba(99,102,241,0.3)]'
-                             : 'bg-white/5 border-transparent text-white/60 hover:bg-white/10 hover:text-white'
+                             ? 'bg-indigo-600 border-indigo-400 text-white shadow-[0_0_20px_rgba(79,70,229,0.4)] scale-105 z-10'
+                             : 'bg-white/5 border-transparent text-white/50 hover:bg-white/10 hover:text-white hover:border-white/10'
                          }`}
                        >
                          {/* Schematic Thumbnail */}
@@ -313,8 +313,8 @@ function App() {
                            <div 
                              className={`border-[1.5px] rounded-[2px] transition-all ${
                                aspectRatio === ratio 
-                                 ? 'border-indigo-200 bg-indigo-400/30' 
-                                 : 'border-white/40 bg-white/5 group-hover:border-white/60'
+                                 ? 'border-white bg-white/30' 
+                                 : 'border-white/30 bg-white/5 group-hover:border-white/60'
                              }`}
                              style={{
                                aspectRatio: `${w}/${h}`,
@@ -340,10 +340,10 @@ function App() {
                      <button
                        key={q}
                        onClick={() => setQuality(q)}
-                       className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
+                       className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 ${
                          quality === q
-                           ? 'bg-white/10 text-white shadow-sm'
-                           : 'text-white/50 hover:text-white'
+                           ? 'bg-indigo-600 text-white shadow-[0_0_15px_rgba(79,70,229,0.4)] ring-1 ring-indigo-400'
+                           : 'text-white/50 hover:text-white hover:bg-white/5'
                        }`}
                      >
                        {q}
