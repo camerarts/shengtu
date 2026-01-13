@@ -1,7 +1,6 @@
-import { AspectRatio, ImageQuality } from './types';
+import { AspectRatio, ImageQuality, GenerateImageResponse } from './types';
 
 // Resolution Logic (For UI display only)
-// Based on Gemini 3 Pro documentation approximation
 export function getDimensions(aspectRatio: AspectRatio | string, quality: ImageQuality): { width: number; height: number } {
   const map: Record<string, Record<string, { w: number; h: number }>> = {
     "1:1": {
@@ -21,7 +20,7 @@ export function getDimensions(aspectRatio: AspectRatio | string, quality: ImageQ
     }
   };
 
-  const ratioData = map[aspectRatio] || map["1:1"]; // Fallback to square if legacy ratio found
+  const ratioData = map[aspectRatio] || map["1:1"]; 
   const dim = ratioData[quality] || ratioData["1K"];
   return { width: dim.w, height: dim.h };
 }
@@ -33,101 +32,44 @@ export async function generateImageDirectly(
   aspectRatio: AspectRatio,
   quality: ImageQuality,
   referenceImageBase64?: string | null
-) {
-  const { width, height } = getDimensions(aspectRatio, quality);
+): Promise<GenerateImageResponse> {
   
-  // Model: gemini-3-pro-image-preview
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${apiKey}`;
+  // We now call our own Cloudflare Worker endpoint instead of Google directly.
+  // This allows the Worker to handle R2 uploads securely.
+  // The API Key is passed via header.
   
-  const finalPrompt = negativePrompt ? `${prompt} --no ${negativePrompt}` : prompt;
-
-  // Construct parts: Text part is always present
-  const parts: any[] = [{ text: finalPrompt }];
-
-  // If reference image exists, add it to parts
-  if (referenceImageBase64) {
-    // Extract base64 data and mime type. 
-    // Format usually: "data:image/jpeg;base64,....."
-    const match = referenceImageBase64.match(/^data:(image\/[a-zA-Z]+);base64,(.+)$/);
-    if (match) {
-        parts.push({
-            inlineData: {
-                mimeType: match[1],
-                data: match[2]
-            }
-        });
-    }
-  }
-
-  // CORRECT PAYLOAD STRUCTURE FOR GEMINI 3 PRO IMAGE
-  // 1. safetySettings is at the root level.
-  // 2. config uses `imageConfig` with `aspectRatio` and `imageSize`.
-  // 3. `mediaResolution` is REMOVED.
-  // 4. `responseMimeType` is REMOVED for image generation.
+  const url = '/api/generate-image';
   
   const payload = {
-    contents: [{
-      parts: parts
-    }],
-    generationConfig: {
-      imageConfig: {
-        aspectRatio: aspectRatio, // strictly "1:1", "3:4", "4:3", "9:16", "16:9"
-        imageSize: quality        // strictly "1K", "2K", "4K"
-      }
-    },
-    safetySettings: [
-        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
-        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
-        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH" },
-        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" }
-    ]
+    prompt,
+    negativePrompt,
+    aspectRatio,
+    quality,
+    referenceImageBase64
   };
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey 
+    },
     body: JSON.stringify(payload)
   });
 
   if (!response.ok) {
       const errorText = await response.text();
       let errorMessage = '生成图片失败。';
-      
       try {
         const errorJson = JSON.parse(errorText);
         if (errorJson.error && errorJson.error.message) {
-            errorMessage = `API 错误: ${errorJson.error.message}`;
+            errorMessage = errorJson.error.message;
         }
-      } catch (e) { /* ignore json parse error */ }
-
-      if (response.status === 429) {
-          errorMessage = 'API 请求过于频繁，请稍后再试。';
-      } else if (response.status === 403) {
-          errorMessage = 'API Key 无效或没有权限访问该模型。';
-      } else if (response.status === 400) {
-          errorMessage += ' (请求参数错误)';
-      } else if (response.status === 413) {
-          errorMessage = '上传的参考图片太大。';
-      }
-
+      } catch (e) { /* ignore */ }
+      
       throw new Error(errorMessage);
   }
 
-  const data: any = await response.json();
-  
-  // Image parts might be mixed with text parts, find the inlineData
-  // Gemini 3 Pro returns image in `inlineData`
-  const part = data.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData);
-  
-  if (!part || !part.inlineData || !part.inlineData.data) {
-       console.error("Full Response:", data);
-       throw new Error('生成成功，但返回数据中未找到图片数据。');
-  }
-
-  return {
-    contentType: "image/png",
-    base64: part.inlineData.data,
-    width,
-    height
-  };
+  const data = await response.json();
+  return data as GenerateImageResponse;
 }

@@ -131,14 +131,14 @@ function App() {
     const startTime = Date.now();
 
     try {
-      // Direct client-side call
+      // Calls /api/generate-image proxy
       const successData = await generateImageDirectly(
         apiKey,
         prompt.trim(),
         negativePrompt.trim() || undefined,
         aspectRatio,
         quality,
-        referenceImage // Pass the reference image
+        referenceImage
       );
 
       const duration = (Date.now() - startTime) / 1000;
@@ -154,15 +154,16 @@ function App() {
         negativePrompt: negativePrompt.trim() || undefined,
         aspectRatio,
         quality,
-        thumbnailBase64: successData.base64,
-        referenceImageBase64: referenceImage || undefined, // Save ref image
+        // Use R2 URL if available, otherwise base64, otherwise fallback
+        thumbnailBase64: successData.base64 || "", 
+        imageUrl: successData.url, // Save the R2 URL
+        referenceImageBase64: referenceImage || undefined,
         width: successData.width,
         height: successData.height
       });
 
     } catch (err: any) {
       setError(err.message || "发生了意外的错误。");
-      // Don't auto-show settings modal, just show the error message.
     } finally {
       setLoading(false);
     }
@@ -171,11 +172,17 @@ function App() {
   const handleDownload = () => {
     if (!result) return;
     const link = document.createElement('a');
-    link.href = `data:${result.contentType};base64,${result.base64}`;
-    link.download = `gemini-3-${Date.now()}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Prefer base64 for download if available as it triggers immediate download
+    // If only URL is available, opening it might be better, but we'll try to download
+    if (result.base64) {
+        link.href = `data:${result.contentType};base64,${result.base64}`;
+        link.download = `gemini-3-${Date.now()}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } else if (result.url) {
+        window.open(result.url, '_blank');
+    }
   };
 
   const restoreHistoryItem = (item: HistoryItem) => {
@@ -183,17 +190,25 @@ function App() {
     setNegativePrompt(item.negativePrompt || '');
     setAspectRatio(item.aspectRatio);
     setQuality(item.quality);
-    setReferenceImage(item.referenceImageBase64 || null); // Restore ref image
+    setReferenceImage(item.referenceImageBase64 || null);
+    
     setResult({
       contentType: 'image/png',
-      base64: item.thumbnailBase64,
+      base64: item.thumbnailBase64, // Might be empty if we optimized history later
+      url: item.imageUrl,
       width: item.width,
       height: item.height
     });
     setGenerationTime(0);
     setError(null);
-    // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Helper to determine what source to show
+  const getDisplaySource = (res: GenerateImageResponse) => {
+    if (res.base64) return `data:${res.contentType};base64,${res.base64}`;
+    if (res.url) return res.url;
+    return '';
   };
 
   return (
@@ -215,7 +230,7 @@ function App() {
         </div>
         <div className="flex items-center gap-3">
            <div className="hidden sm:block px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-mono text-white/50">
-             v3.0-preview
+             v3.1-R2
            </div>
            <button
              onClick={() => setShowSettings(true)}
@@ -411,16 +426,16 @@ function App() {
               <div className="relative w-full h-full flex flex-col">
                 <div className="flex-grow flex items-center justify-center bg-black/40 rounded-xl overflow-hidden mb-4 border border-white/5 relative">
                   <img 
-                    src={`data:${result.contentType};base64,${result.base64}`} 
+                    src={getDisplaySource(result)}
                     alt="Generated Result" 
                     className="max-h-[600px] w-auto max-w-full object-contain shadow-2xl"
                   />
                   <a 
-                    href={`data:${result.contentType};base64,${result.base64}`} 
+                    href={getDisplaySource(result)}
                     target="_blank"
                     rel="noreferrer"
                     className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-black/70 rounded-lg text-white/70 hover:text-white backdrop-blur-md transition-colors"
-                    title="查看大图"
+                    title="在浏览器中查看"
                   >
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -433,8 +448,12 @@ function App() {
                     <div className="flex items-center gap-2 text-xs text-white/50">
                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
                        <span>耗时: {generationTime.toFixed(2)}秒</span>
-                       <span className="text-white/20">|</span>
-                       <span>{result.width}x{result.height}px</span>
+                       {result.url && (
+                          <>
+                           <span className="text-white/20">|</span>
+                           <span className="text-indigo-400">已存入 R2 云端</span>
+                          </>
+                       )}
                     </div>
                     <p className="text-[10px] text-indigo-300/80 flex items-center gap-1">
                       <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
@@ -445,7 +464,7 @@ function App() {
                   <div className="flex gap-3">
                      <Button variant="secondary" onClick={() => setResult(null)}>关闭</Button>
                      <Button variant="primary" onClick={handleDownload}>
-                       下载 PNG
+                       下载
                        <svg className="ml-2 w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                        </svg>

@@ -1,9 +1,15 @@
 /**
- * Cloudflare Worker for Gemini 3 Pro Image Generation
+ * Cloudflare Worker for Gemini 3 Pro Image Generation + R2 Upload
  */
+
+interface R2Bucket {
+  put(key: string, value: any, options?: any): Promise<any>;
+}
 
 interface Env {
   GEMINI_API_KEY: string;
+  IMAGES_BUCKET: R2Bucket; // Binding name in Wrangler/Dashboard
+  PUBLIC_BUCKET_URL: string; // The public domain for your R2 bucket (e.g., https://images.yourdomain.com)
 }
 
 // Resolution Logic based on Gemini 3 Pro specs
@@ -33,6 +39,16 @@ function getDimensions(aspectRatio: string, quality: string): { width: number; h
   return { width: dim.w, height: dim.h };
 }
 
+// Helper to convert Base64 to ArrayBuffer
+function base64ToArrayBuffer(base64: string) {
+  const binaryString = atob(base64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
 export const onRequestPost = async (context: any) => {
   const { request, env } = context;
 
@@ -48,43 +64,42 @@ export const onRequestPost = async (context: any) => {
   }
 
   try {
-    const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+    // Priority: Header Key (User provided) > Env Key (Server provided)
+    const apiKey = request.headers.get("x-goog-api-key") || env.GEMINI_API_KEY;
     
-    if (!env.GEMINI_API_KEY) {
-      throw new Error("服务器配置错误：缺少 API Key。");
+    if (!apiKey) {
+      throw new Error("缺少 API Key。请在设置中输入 Key 或配置服务器环境变量。");
     }
 
     // 2. Parse Body
     const body: any = await request.json();
-    const { prompt, negativePrompt, aspectRatio, quality } = body;
+    const { prompt, negativePrompt, aspectRatio, quality, referenceImageBase64 } = body;
 
     // 3. Input Validation
-    if (!prompt || typeof prompt !== 'string' || prompt.length > 2000) {
-      return new Response(JSON.stringify({ error: { code: 'INVALID_INPUT', message: '提示词必填且不能超过 2000 字符。' } }), { status: 400, headers: corsHeaders });
-    }
-
-    const validRatios = ["1:1", "3:4", "4:3", "9:16", "16:9"];
-    if (!validRatios.includes(aspectRatio)) {
-      return new Response(JSON.stringify({ error: { code: 'INVALID_INPUT', message: '无效的宽高比。仅支持 1:1, 3:4, 4:3, 9:16, 16:9' } }), { status: 400, headers: corsHeaders });
-    }
-
-    if (!["1K", "2K", "4K"].includes(quality)) {
-      return new Response(JSON.stringify({ error: { code: 'INVALID_INPUT', message: '无效的清晰度设置。' } }), { status: 400, headers: corsHeaders });
+    if (!prompt || typeof prompt !== 'string') {
+      return new Response(JSON.stringify({ error: { code: 'INVALID_INPUT', message: '提示词必填。' } }), { status: 400, headers: corsHeaders });
     }
 
     // 4. Calculate Dimensions (For response only)
     const { width, height } = getDimensions(aspectRatio, quality);
 
     // 5. Construct Gemini API Request
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${env.GEMINI_API_KEY}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${apiKey}`;
     
     const finalPrompt = negativePrompt ? `${prompt} --no ${negativePrompt}` : prompt;
 
-    // Correct Structure
+    const parts: any[] = [{ text: finalPrompt }];
+    if (referenceImageBase64) {
+        const match = referenceImageBase64.match(/^data:(image\/[a-zA-Z]+);base64,(.+)$/);
+        if (match) {
+            parts.push({
+                inlineData: { mimeType: match[1], data: match[2] }
+            });
+        }
+    }
+
     const payload = {
-      contents: [{
-        parts: [{ text: finalPrompt }]
-      }],
+      contents: [{ parts: parts }],
       generationConfig: {
         imageConfig: {
             aspectRatio: aspectRatio,
@@ -123,10 +138,34 @@ export const onRequestPost = async (context: any) => {
 
     const base64Image = part.inlineData.data;
 
-    // 8. Return Success
+    // 8. Upload to R2 (If Configured)
+    let imageUrl = null;
+    if (env.IMAGES_BUCKET && env.PUBLIC_BUCKET_URL) {
+        try {
+            const buffer = base64ToArrayBuffer(base64Image);
+            const filename = `gemini-${Date.now()}-${crypto.randomUUID().slice(0, 8)}.png`;
+            
+            await env.IMAGES_BUCKET.put(filename, buffer, {
+                httpMetadata: {
+                    contentType: 'image/png',
+                    cacheControl: 'public, max-age=31536000'
+                }
+            });
+
+            // Remove trailing slash if present
+            const baseUrl = env.PUBLIC_BUCKET_URL.replace(/\/$/, "");
+            imageUrl = `${baseUrl}/${filename}`;
+        } catch (r2Error: any) {
+            console.error("R2 Upload Failed:", r2Error);
+            // We don't fail the request if upload fails, just return base64
+        }
+    }
+
+    // 9. Return Success
     return new Response(JSON.stringify({
       contentType: "image/png",
-      base64: base64Image,
+      base64: base64Image, // Still return base64 for immediate display/fallback
+      url: imageUrl,       // Return the R2 URL
       width,
       height
     }), {

@@ -21,7 +21,8 @@ export interface GenerateImageRequest {
 
 export interface GenerateImageResponse {
   contentType: string;
-  base64: string;
+  base64?: string; // Optional now, as we might only return URL
+  url?: string;     // New field for R2 URL
   width: number;
   height: number;
 }
@@ -40,8 +41,9 @@ export interface HistoryItem {
   negativePrompt?: string;
   aspectRatio: AspectRatio;
   quality: ImageQuality;
-  thumbnailBase64: string; // Storing the full base64 as thumbnail for this demo
-  referenceImageBase64?: string; // Optional reference image used for generation
+  thumbnailBase64?: string; // Small thumbnail or base64
+  imageUrl?: string;        // The R2 URL
+  referenceImageBase64?: string; 
   width: number;
   height: number;
 }
