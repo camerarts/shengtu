@@ -145,9 +145,7 @@ function App() {
 
     } catch (err: any) {
       setError(err.message || "发生了意外的错误。");
-      if (err.message && (err.message.includes('403') || err.message.includes('API Key'))) {
-        setShowSettings(true); // Re-prompt for key if likely invalid
-      }
+      // Don't auto-show settings modal, just show the error message.
     } finally {
       setLoading(false);
     }

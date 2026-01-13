@@ -108,8 +108,10 @@ export async function generateImageDirectly(
       
       if (response.status === 429) {
           errorMessage = 'API 请求过于频繁，请稍后再试。';
-      } else if (response.status === 400 || response.status === 403) {
-          errorMessage = 'API Key 无效，或提示词/参考图被拒绝。';
+      } else if (response.status === 403) {
+          errorMessage = 'API Key 无效或没有权限访问该模型。';
+      } else if (response.status === 400) {
+          errorMessage = '请求无效。可能是提示词被安全策略拒绝，或参数错误。';
       } else if (response.status === 413) {
           errorMessage = '上传的参考图片太大。';
       }
