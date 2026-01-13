@@ -20,18 +20,9 @@ export interface GenerateImageRequest {
 }
 
 export interface GenerateImageResponse {
-  contentType: string;
-  base64?: string; // Optional now, as we might only return URL
-  url?: string;     // New field for R2 URL
   width: number;
   height: number;
-}
-
-export interface ApiErrorResponse {
-  error: {
-    code: string;
-    message: string;
-  }
+  // We handle the image data separately as a Blob now
 }
 
 export interface HistoryItem {
@@ -41,9 +32,8 @@ export interface HistoryItem {
   negativePrompt?: string;
   aspectRatio: AspectRatio;
   quality: ImageQuality;
-  thumbnailBase64?: string; // Small thumbnail or base64
-  imageUrl?: string;        // The R2 URL
-  referenceImageBase64?: string; 
+  thumbnailBase64: string; // We ALWAYS store a small resized thumbnail for history list
+  imageUrl?: string;       // The R2 URL (if uploaded)
   width: number;
   height: number;
 }
