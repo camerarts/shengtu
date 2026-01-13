@@ -155,7 +155,6 @@ function App() {
         saveToHistory({ ...itemToUpdate, imageUrl: url });
       }
     } catch (e: any) {
-      // Now catching actual server error message
       setError("上传失败: " + e.message);
     } finally {
       setUploading(false);
@@ -260,69 +259,96 @@ function App() {
 
         <div className="lg:col-span-7 space-y-6">
           <GlassCard className="min-h-[500px] flex flex-col justify-center relative overflow-hidden">
-            {error && <div className="absolute top-6 left-6 right-6 z-20 bg-red-500/10 border border-red-500/20 text-red-200 px-4 py-3 rounded-xl backdrop-blur-md">{error}</div>}
+            {error && <div className="absolute top-6 left-6 right-6 z-20 bg-red-500/10 border border-red-500/20 text-red-200 px-4 py-3 rounded-xl backdrop-blur-md shadow-2xl">{error}</div>}
+            
             {!currentResult && !loading && !error && <div className="text-center space-y-4 opacity-50"><p className="text-white/40 text-sm">输入提示词，开始绘制你的梦境</p></div>}
+            
             {loading && <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/20 backdrop-blur-sm z-10"><div className="w-16 h-16 rounded-full border-t-2 border-r-2 border-indigo-500 animate-spin"></div></div>}
 
             {currentResult && (
               <div className="relative w-full h-full flex flex-col">
-                <div className="flex-grow flex items-center justify-center bg-black/40 rounded-xl overflow-hidden mb-4 border border-white/5 relative group">
+                <div className="flex-grow flex items-center justify-center bg-black/40 rounded-2xl overflow-hidden mb-4 border border-white/5 relative group">
                   <img src={currentResult.cloudUrl || currentResult.localUrl} alt="Result" className="max-h-[600px] w-auto max-w-full object-contain shadow-2xl" />
                   
-                  {/* Resolution & Size Info Overlay */}
-                  <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/80 to-transparent flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                     <div className="flex items-center gap-3">
-                        <span className="px-2 py-1 rounded-md bg-white/10 backdrop-blur-md border border-white/10 text-[10px] font-mono text-white/80">
+                  {/* Floating Action Bar (HUD) */}
+                  <div className="absolute bottom-4 left-4 right-4 bg-black/70 backdrop-blur-xl border border-white/10 rounded-2xl p-2 flex items-center justify-between shadow-2xl z-20">
+                     
+                     {/* Left: Info Chips */}
+                     <div className="flex items-center gap-2 pl-2">
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/10 border border-white/5 text-[10px] font-mono text-white/90">
+                           <svg className="w-3 h-3 text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
                            {currentResult.width} x {currentResult.height}
-                        </span>
+                        </div>
                         {currentResult.blob && currentResult.blob.size > 0 && (
-                          <span className="px-2 py-1 rounded-md bg-white/10 backdrop-blur-md border border-white/10 text-[10px] font-mono text-white/80">
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/10 border border-white/5 text-[10px] font-mono text-white/90">
+                             <svg className="w-3 h-3 text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
                              {formatBytes(currentResult.blob.size)}
-                          </span>
+                          </div>
                         )}
                      </div>
-                  </div>
 
-                  <a 
-                    href={currentResult.cloudUrl || currentResult.localUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-black/70 rounded-lg text-white/70 hover:text-white backdrop-blur-md transition-colors opacity-0 group-hover:opacity-100"
-                    title="在浏览器中查看"
-                  >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                  </a>
+                     {/* Right: Actions */}
+                     <div className="flex items-center gap-1.5">
+                         {/* Upload Button */}
+                         {!currentResult.cloudUrl ? (
+                            <button 
+                               onClick={handleUpload} 
+                               disabled={uploading}
+                               className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/30 text-indigo-200 hover:text-white transition-all text-xs font-medium disabled:opacity-50"
+                            >
+                               {uploading ? (
+                                   <svg className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                               ) : (
+                                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                               )}
+                               <span>{uploading ? '同步中' : '上传'}</span>
+                            </button>
+                         ) : (
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-xs font-medium cursor-default">
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                <span>已同步</span>
+                            </div>
+                         )}
+
+                         {/* Divider */}
+                         <div className="w-px h-4 bg-white/10 mx-1"></div>
+
+                         {/* Download Button */}
+                         <button 
+                             onClick={handleDownload}
+                             className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all"
+                             title="下载原图"
+                         >
+                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                         </button>
+
+                         {/* Open External Link Button */}
+                         <a 
+                           href={currentResult.cloudUrl || currentResult.localUrl}
+                           target="_blank"
+                           rel="noreferrer"
+                           className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all"
+                           title="在新标签页打开"
+                         >
+                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                         </a>
+                     </div>
+                  </div>
                 </div>
                 
-                <div className="flex flex-col sm:flex-row items-end sm:items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-xs text-white/50">
-                       <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                       <span>耗时: {currentResult.generationTime.toFixed(2)}秒</span>
-                       {currentResult.cloudUrl ? <span className="text-indigo-400 ml-2">已云端同步</span> : <span className="text-orange-300 ml-2">本地预览模式</span>}
-                    </div>
-                    <p className="text-[10px] text-indigo-300/80">{SYNTH_ID_NOTICE}</p>
-                  </div>
-                  
-                  <div className="flex gap-3">
-                     {/* Upload Button */}
-                     {!currentResult.cloudUrl && (
-                         <Button 
-                            variant="secondary" 
-                            onClick={handleUpload} 
-                            isLoading={uploading}
-                            className="bg-indigo-500/20 border-indigo-500/30 hover:bg-indigo-500/30 text-indigo-200"
-                         >
-                            <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-                            上传云端
-                         </Button>
-                     )}
-                     
-                     <Button variant="secondary" onClick={() => setCurrentResult(null)}>关闭</Button>
-                     <Button variant="primary" onClick={handleDownload}>下载</Button>
-                  </div>
+                {/* Footer Meta Info */}
+                <div className="flex justify-between items-center px-2">
+                   <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5">
+                         <span className="relative flex h-2 w-2">
+                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                           <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                         </span>
+                         <span className="text-xs text-white/40 font-mono">{(currentResult.generationTime).toFixed(2)}s</span>
+                      </div>
+                      <span className="text-[10px] text-white/20">|</span>
+                      <p className="text-[10px] text-white/30 tracking-wide">{SYNTH_ID_NOTICE}</p>
+                   </div>
                 </div>
               </div>
             )}
