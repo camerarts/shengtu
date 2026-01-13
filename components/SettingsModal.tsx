@@ -28,7 +28,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
       />
       
       {/* Modal Content */}
-      <div className="relative w-full max-w-md bg-[#1a1a20] border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-blob">
+      <div className="relative w-full max-w-md bg-[#1a1a20] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
         <div className="p-6">
           <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
             <svg className="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
