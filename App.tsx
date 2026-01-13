@@ -5,7 +5,7 @@ import { HistoryItemCard } from './components/HistoryItem';
 import { SettingsModal } from './components/SettingsModal';
 import { AspectRatio, ImageQuality, HistoryItem } from './types';
 import { ASPECT_RATIOS, QUALITIES, SYNTH_ID_NOTICE } from './constants';
-import { generateImageBlob, uploadImageBlob, createThumbnail } from './utils';
+import { generateImageBlob, uploadImageBlob, createThumbnail, formatBytes } from './utils';
 
 const MAX_HISTORY = 20;
 
@@ -155,6 +155,7 @@ function App() {
         saveToHistory({ ...itemToUpdate, imageUrl: url });
       }
     } catch (e: any) {
+      // Now catching actual server error message
       setError("上传失败: " + e.message);
     } finally {
       setUploading(false);
@@ -265,8 +266,34 @@ function App() {
 
             {currentResult && (
               <div className="relative w-full h-full flex flex-col">
-                <div className="flex-grow flex items-center justify-center bg-black/40 rounded-xl overflow-hidden mb-4 border border-white/5 relative">
+                <div className="flex-grow flex items-center justify-center bg-black/40 rounded-xl overflow-hidden mb-4 border border-white/5 relative group">
                   <img src={currentResult.cloudUrl || currentResult.localUrl} alt="Result" className="max-h-[600px] w-auto max-w-full object-contain shadow-2xl" />
+                  
+                  {/* Resolution & Size Info Overlay */}
+                  <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/80 to-transparent flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                     <div className="flex items-center gap-3">
+                        <span className="px-2 py-1 rounded-md bg-white/10 backdrop-blur-md border border-white/10 text-[10px] font-mono text-white/80">
+                           {currentResult.width} x {currentResult.height}
+                        </span>
+                        {currentResult.blob && currentResult.blob.size > 0 && (
+                          <span className="px-2 py-1 rounded-md bg-white/10 backdrop-blur-md border border-white/10 text-[10px] font-mono text-white/80">
+                             {formatBytes(currentResult.blob.size)}
+                          </span>
+                        )}
+                     </div>
+                  </div>
+
+                  <a 
+                    href={currentResult.cloudUrl || currentResult.localUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-black/70 rounded-lg text-white/70 hover:text-white backdrop-blur-md transition-colors opacity-0 group-hover:opacity-100"
+                    title="在浏览器中查看"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
                 </div>
                 
                 <div className="flex flex-col sm:flex-row items-end sm:items-center justify-between gap-4">

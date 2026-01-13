@@ -13,6 +13,15 @@ export function getDimensions(aspectRatio: AspectRatio | string, quality: ImageQ
   return { width: d.w, height: d.h };
 }
 
+export function formatBytes(bytes: number, decimals = 2) {
+  if (!+bytes) return '0 Bytes';
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+}
+
 // 1. Generate: Returns Blob and dimensions
 export async function generateImageBlob(
   apiKey: string,
@@ -57,7 +66,19 @@ export async function uploadImageBlob(blob: Blob): Promise<string> {
   });
 
   if (!response.ok) {
-    throw new Error('Upload failed');
+    let errorMessage = `Upload failed (${response.status})`;
+    try {
+        // Try to parse JSON error from Worker
+        const errorData = await response.json();
+        if (errorData.error && errorData.error.message) {
+            errorMessage = errorData.error.message;
+        }
+    } catch (e) {
+        // Fallback to text if JSON parse fails
+        const text = await response.text();
+        if (text) errorMessage = text;
+    }
+    throw new Error(errorMessage);
   }
 
   const data = await response.json();
