@@ -23,7 +23,7 @@ export const HistoryItemCard: React.FC<HistoryItemProps> = ({ item, onClick }) =
         <p className="text-white text-xs font-medium line-clamp-1">{item.prompt}</p>
         <div className="flex gap-2 mt-1">
           <span className="text-[10px] text-white/70 bg-white/10 px-1.5 py-0.5 rounded backdrop-blur-md">
-            {item.aspectRatio}
+            {RATIO_LABELS[item.aspectRatio]}
           </span>
           <span className="text-[10px] text-white/70 bg-white/10 px-1.5 py-0.5 rounded backdrop-blur-md">
             {item.quality}

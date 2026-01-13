@@ -114,7 +114,7 @@ export async function generateImageDirectly(
           errorMessage = '上传的参考图片太大。';
       }
 
-      throw new Error(errorMessage + ` (${response.status})`);
+      throw new Error(errorMessage + ` (${response.status}) Details: ${errorText}`);
   }
 
   const data: any = await response.json();
