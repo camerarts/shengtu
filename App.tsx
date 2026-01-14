@@ -315,7 +315,8 @@ function App() {
                 onChange={setPromptHeader}
                 placeholder="例如：赛博朋克风格，8k分辨率..."
                 multiline={true}
-                minHeight="h-48"
+                fullHeight={true}
+                className="flex-1"
               />
 
               <InputWithTools
@@ -325,6 +326,7 @@ function App() {
                 placeholder="例如：一只穿着宇航服的猫..."
                 multiline={true}
                 fullHeight={true}
+                className="flex-[3]"
               />
             </div>
           </GlassCard>
