@@ -283,7 +283,7 @@ function App() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-[1400px] relative z-10">
+    <div className="flex flex-col h-[142.857vh] container mx-auto px-4 py-6 max-w-[1400px] relative z-10 box-border">
       <SettingsModal
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
@@ -291,7 +291,7 @@ function App() {
         initialKey={apiKey}
       />
 
-      <nav className="flex items-center justify-between mb-8">
+      <nav className="flex-none flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 shadow-lg shadow-indigo-500/20"></div>
           <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70 tracking-tight">
@@ -306,10 +306,11 @@ function App() {
         </div>
       </nav>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(142.8vh-8rem)]">
+      {/* Grid fills remaining space via flex-1 */}
+      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        {/* Column 1: Core Inputs (Header & Body) - Span 3 - Full Height */}
-        <div className="lg:col-span-3 h-full min-h-[500px]">
+        {/* Column 1: Core Inputs */}
+        <div className="lg:col-span-3 h-full min-h-[500px] flex flex-col">
           <GlassCard title="创意输入" className="h-full flex flex-col">
             <div className="flex-1 flex flex-col gap-5 overflow-hidden">
               <InputWithTools
@@ -335,8 +336,8 @@ function App() {
           </GlassCard>
         </div>
 
-        {/* Column 2: Final Prompt & Configuration - Span 4 */}
-        <div className="lg:col-span-4 space-y-6 h-full overflow-y-auto custom-scrollbar">
+        {/* Column 2: Final Prompt & Configuration */}
+        <div className="lg:col-span-4 space-y-6 h-full overflow-y-auto custom-scrollbar pb-6">
           <GlassCard title="配置与预览">
             <div className="space-y-5">
               
@@ -439,8 +440,8 @@ function App() {
           </GlassCard>
         </div>
 
-        {/* Column 3: Result & History - Span 5 */}
-        <div className="lg:col-span-5 space-y-6 h-full overflow-y-auto custom-scrollbar">
+        {/* Column 3: Result & History */}
+        <div className="lg:col-span-5 space-y-6 h-full overflow-y-auto custom-scrollbar pb-6">
           <GlassCard className="min-h-[500px] flex flex-col justify-center relative overflow-hidden">
             {error && <div className="absolute top-6 left-6 right-6 z-20 bg-red-500/10 border border-red-500/20 text-red-200 px-4 py-3 rounded-xl backdrop-blur-md shadow-2xl">{error}</div>}
             
