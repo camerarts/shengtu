@@ -10,6 +10,25 @@ import { generateImageBlob, uploadImageBlob, createThumbnail, formatBytes, split
 
 const MAX_HISTORY = 20;
 
+// SVG Icons for Aspect Ratios
+const AspectRatioIcon = ({ ratio }: { ratio: AspectRatio }) => {
+  const common = "stroke-current stroke-2 fill-none";
+  switch (ratio) {
+    case AspectRatio.SQUARE: // 1:1
+      return <svg className="w-4 h-4" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2" className={common} /></svg>;
+    case AspectRatio.PORTRAIT_3_4: // 3:4
+      return <svg className="w-4 h-4" viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="16" rx="2" className={common} /></svg>;
+    case AspectRatio.LANDSCAPE_4_3: // 4:3
+      return <svg className="w-4 h-4" viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="2" className={common} /></svg>;
+    case AspectRatio.PORTRAIT_9_16: // 9:16
+      return <svg className="w-4 h-4" viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2" className={common} /></svg>;
+    case AspectRatio.LANDSCAPE_16_9: // 16:9
+      return <svg className="w-4 h-4" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="2" className={common} /></svg>;
+    default:
+      return <svg className="w-4 h-4" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2" className={common} /></svg>;
+  }
+};
+
 function App() {
   const [apiKey, setApiKey] = useState('');
   const [showSettings, setShowSettings] = useState(false);
@@ -31,6 +50,10 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   
+  // Custom Dropdown State
+  const [isRatioOpen, setIsRatioOpen] = useState(false);
+  const ratioDropdownRef = useRef<HTMLDivElement>(null);
+
   // Current Active Result
   const [currentResult, setCurrentResult] = useState<{
     blob: Blob;
@@ -63,6 +86,15 @@ function App() {
     }
     const savedKey = localStorage.getItem('gemini_api_key');
     if (savedKey) setApiKey(savedKey);
+
+    // Click outside handler for dropdown
+    const handleClickOutside = (event: MouseEvent) => {
+      if (ratioDropdownRef.current && !ratioDropdownRef.current.contains(event.target as Node)) {
+        setIsRatioOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   // Cleanup split images on unmount or new generation
@@ -264,26 +296,26 @@ function App() {
           </h1>
         </div>
         <div className="flex items-center gap-3">
-           <div className="hidden sm:block px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-mono text-white/50">v3.5-Pro</div>
+           <div className="hidden sm:block px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-mono text-white/50">v3.6-Pro</div>
            <button onClick={() => setShowSettings(true)} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white">
              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
            </button>
         </div>
       </nav>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-8rem)]">
         
-        {/* Column 1: Core Inputs (Header & Body) - Span 3 */}
-        <div className="lg:col-span-3 space-y-6">
-          <GlassCard title="创意输入" className="h-full">
-            <div className="space-y-6">
+        {/* Column 1: Core Inputs (Header & Body) - Span 3 - Full Height */}
+        <div className="lg:col-span-3 h-full min-h-[500px]">
+          <GlassCard title="创意输入" className="h-full flex flex-col">
+            <div className="flex-1 flex flex-col gap-5 overflow-hidden">
               <InputWithTools
                 label="风格前缀 / 抬头 (Header)"
                 value={promptHeader}
                 onChange={setPromptHeader}
                 placeholder="例如：赛博朋克风格，8k分辨率..."
                 multiline={true}
-                minHeight="h-32"
+                minHeight="h-48"
               />
 
               <InputWithTools
@@ -292,14 +324,14 @@ function App() {
                 onChange={setPromptBody}
                 placeholder="例如：一只穿着宇航服的猫..."
                 multiline={true}
-                minHeight="h-64"
+                fullHeight={true}
               />
             </div>
           </GlassCard>
         </div>
 
         {/* Column 2: Final Prompt & Configuration - Span 4 */}
-        <div className="lg:col-span-4 space-y-6">
+        <div className="lg:col-span-4 space-y-6 h-full overflow-y-auto custom-scrollbar">
           <GlassCard title="配置与预览">
             <div className="space-y-5">
               
@@ -343,20 +375,39 @@ function App() {
               <div className="grid grid-cols-2 gap-3">
                  <div>
                    <label className="text-xs text-white/40 mb-1.5 block ml-1">图片比例</label>
-                   <div className="relative">
-                      <select 
-                        value={aspectRatio} 
-                        onChange={(e) => setAspectRatio(e.target.value as AspectRatio)}
-                        className="w-full appearance-none bg-black/20 border border-white/10 hover:border-white/20 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/30 transition-all cursor-pointer"
+                   
+                   {/* Custom Visual Dropdown for Aspect Ratio */}
+                   <div className="relative" ref={ratioDropdownRef}>
+                      <div 
+                        onClick={() => setIsRatioOpen(!isRatioOpen)}
+                        className="w-full bg-black/20 border border-white/10 hover:border-white/20 rounded-xl px-3 py-2.5 text-xs text-white flex items-center justify-between cursor-pointer transition-all"
                       >
-                        {ASPECT_RATIOS.map((r) => (
-                          <option key={r} value={r} className="bg-[#1a1a20] text-white py-1">
-                            {RATIO_LABELS[r] || r}
-                          </option>
-                        ))}
-                      </select>
+                        <div className="flex items-center gap-2">
+                          <AspectRatioIcon ratio={aspectRatio} />
+                          <span>{RATIO_LABELS[aspectRatio]}</span>
+                        </div>
+                        <svg className={`w-4 h-4 text-white/50 transition-transform ${isRatioOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                      </div>
+                      
+                      {isRatioOpen && (
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1a20] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden py-1 max-h-60 overflow-y-auto">
+                          {ASPECT_RATIOS.map((r) => (
+                            <div 
+                              key={r}
+                              onClick={() => { setAspectRatio(r); setIsRatioOpen(false); }}
+                              className={`px-3 py-2.5 flex items-center gap-3 hover:bg-white/5 cursor-pointer transition-colors ${aspectRatio === r ? 'bg-indigo-500/20 text-indigo-300' : 'text-white/80'}`}
+                            >
+                              <div className={aspectRatio === r ? 'text-indigo-400' : 'text-white/40'}>
+                                <AspectRatioIcon ratio={r} />
+                              </div>
+                              <span className="text-xs font-medium">{RATIO_LABELS[r]}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                    </div>
                  </div>
+
                  <div>
                    <label className="text-xs text-white/40 mb-1.5 block ml-1">清晰度</label>
                    <div className="relative">
@@ -371,6 +422,9 @@ function App() {
                           </option>
                         ))}
                       </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-white/50">
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                      </div>
                    </div>
                  </div>
               </div>
@@ -381,7 +435,7 @@ function App() {
         </div>
 
         {/* Column 3: Result & History - Span 5 */}
-        <div className="lg:col-span-5 space-y-6">
+        <div className="lg:col-span-5 space-y-6 h-full overflow-y-auto custom-scrollbar">
           <GlassCard className="min-h-[500px] flex flex-col justify-center relative overflow-hidden">
             {error && <div className="absolute top-6 left-6 right-6 z-20 bg-red-500/10 border border-red-500/20 text-red-200 px-4 py-3 rounded-xl backdrop-blur-md shadow-2xl">{error}</div>}
             

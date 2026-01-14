@@ -9,6 +9,7 @@ interface InputWithToolsProps {
   readOnly?: boolean;
   className?: string;
   minHeight?: string;
+  fullHeight?: boolean; // New prop to force full height expansion
 }
 
 export const InputWithTools: React.FC<InputWithToolsProps> = ({
@@ -19,7 +20,8 @@ export const InputWithTools: React.FC<InputWithToolsProps> = ({
   multiline = false,
   readOnly = false,
   className = "",
-  minHeight = "h-12"
+  minHeight = "h-12",
+  fullHeight = false
 }) => {
   const handleCopy = async () => {
     if (!value) return;
@@ -41,16 +43,16 @@ export const InputWithTools: React.FC<InputWithToolsProps> = ({
   };
 
   return (
-    <div className={className}>
+    <div className={`${className} ${fullHeight ? 'flex flex-col' : ''}`}>
       {label && <label className="text-xs text-white/40 mb-1.5 block ml-1">{label}</label>}
-      <div className="relative group">
+      <div className={`relative group ${fullHeight ? 'flex-1 flex flex-col' : ''}`}>
         {multiline ? (
           <textarea
             value={value}
             onChange={(e) => onChange && onChange(e.target.value)}
             placeholder={placeholder}
             readOnly={readOnly}
-            className={`w-full bg-black/20 border border-white/10 rounded-xl p-3 pt-9 text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/50 transition-all resize-none text-sm leading-relaxed ${minHeight} ${readOnly ? 'cursor-default text-white/80' : ''}`}
+            className={`w-full bg-black/20 border border-white/10 rounded-xl p-3 pt-9 text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/50 transition-all resize-none text-sm leading-relaxed ${fullHeight ? 'h-full flex-1' : minHeight} ${readOnly ? 'cursor-default text-white/80' : ''}`}
           />
         ) : (
           <input
