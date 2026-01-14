@@ -343,7 +343,7 @@ function App() {
                 value={combinedPrompt}
                 readOnly={true}
                 multiline={true}
-                minHeight="h-48"
+                minHeight="h-[48rem]"
                 placeholder="(等待输入...)"
               />
 
