@@ -6,13 +6,17 @@
   body {
     background-color: #0f0f11;
     color: #ffffff;
+    /* Prevent horizontal scrollbars caused by the scaled root element width */
+    overflow-x: hidden;
   }
 }
 
-/* Removed transform: scale(0.75) - This was causing GPU crashes with 4K textures */
+/* Scale the entire app to 70% as requested */
 #root {
-  width: 100%;
-  min-height: 100vh;
+  width: 142.857%; /* 100% / 0.7 */
+  min-height: 142.857vh; /* 100vh / 0.7 */
+  transform: scale(0.7);
+  transform-origin: top left;
 }
 
 .glass-panel {
