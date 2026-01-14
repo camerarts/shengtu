@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { GlassCard } from './components/GlassCard';
 import { Button } from './components/Button';
+import { InputWithTools } from './components/InputWithTools';
 import { HistoryItemCard } from './components/HistoryItem';
 import { SettingsModal } from './components/SettingsModal';
 import { AspectRatio, ImageQuality, HistoryItem } from './types';
@@ -247,7 +248,7 @@ function App() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-6xl relative z-10">
+    <div className="container mx-auto px-4 py-6 max-w-[1400px] relative z-10">
       <SettingsModal
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
@@ -263,7 +264,7 @@ function App() {
           </h1>
         </div>
         <div className="flex items-center gap-3">
-           <div className="hidden sm:block px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-mono text-white/50">v3.4-Pro</div>
+           <div className="hidden sm:block px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-mono text-white/50">v3.5-Pro</div>
            <button onClick={() => setShowSettings(true)} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white">
              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
            </button>
@@ -271,47 +272,59 @@ function App() {
       </nav>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Controls */}
-        <div className="lg:col-span-5 space-y-6">
-          <GlassCard title="创意提示词 (Prompt)">
-            <div className="space-y-4">
-              {/* Header Input */}
-              <div>
-                <label className="text-xs text-white/40 mb-1.5 block ml-1">风格前缀 / 画面设定</label>
-                <input 
-                  type="text" 
-                  value={promptHeader} 
-                  onChange={(e) => setPromptHeader(e.target.value)} 
-                  placeholder="例如：赛博朋克风格，8k分辨率，电影质感..." 
-                  className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/50 transition-all text-sm font-medium" 
-                />
-              </div>
+        
+        {/* Column 1: Core Inputs (Header & Body) - Span 3 */}
+        <div className="lg:col-span-3 space-y-6">
+          <GlassCard title="创意输入" className="h-full">
+            <div className="space-y-6">
+              <InputWithTools
+                label="风格前缀 / 抬头 (Header)"
+                value={promptHeader}
+                onChange={setPromptHeader}
+                placeholder="例如：赛博朋克风格，8k分辨率..."
+                multiline={true}
+                minHeight="h-32"
+              />
 
-              {/* Body Input */}
-              <div>
-                 <label className="text-xs text-white/40 mb-1.5 block ml-1">画面内容 / 主体描述</label>
-                 <textarea 
-                    value={promptBody} 
-                    onChange={(e) => setPromptBody(e.target.value)} 
-                    placeholder="例如：一只穿着宇航服的猫在月球上喝咖啡，背景是地球..." 
-                    className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/50 transition-all resize-none h-24 text-sm leading-relaxed" 
-                 />
-              </div>
+              <InputWithTools
+                label="画面内容 / 主体 (Body)"
+                value={promptBody}
+                onChange={setPromptBody}
+                placeholder="例如：一只穿着宇航服的猫..."
+                multiline={true}
+                minHeight="h-64"
+              />
+            </div>
+          </GlassCard>
+        </div>
 
-              {/* Dynamic Preview */}
-              <div className="bg-white/5 rounded-xl p-3 border border-white/5">
-                <div className="flex justify-between items-center mb-2">
-                   <span className="text-[10px] uppercase text-indigo-300 font-bold tracking-wider">最终 Prompt 预览</span>
-                   <span className="text-[10px] text-white/30">{combinedPrompt.length} chars</span>
-                </div>
-                <div className={`w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white text-sm whitespace-pre-wrap font-medium leading-relaxed ${combinedPrompt ? 'text-white' : 'text-white/30 italic'}`}>
-                   {combinedPrompt || "(等待输入...)"}
-                </div>
-              </div>
-
-              <input type="text" value={negativePrompt} onChange={(e) => setNegativePrompt(e.target.value)} placeholder="反向提示词 (Negative Prompt)" className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/50 transition-all text-sm" />
+        {/* Column 2: Final Prompt & Configuration - Span 4 */}
+        <div className="lg:col-span-4 space-y-6">
+          <GlassCard title="配置与预览">
+            <div className="space-y-5">
               
+              {/* Computed Prompt Preview (ReadOnly) */}
+              <InputWithTools
+                label="最终 Prompt 预览 (自动生成)"
+                value={combinedPrompt}
+                readOnly={true}
+                multiline={true}
+                minHeight="h-48"
+                placeholder="(等待输入...)"
+              />
+
+              {/* Negative Prompt */}
+              <InputWithTools
+                label="反向提示词 (Negative)"
+                value={negativePrompt}
+                onChange={setNegativePrompt}
+                placeholder="例如：低质量，变形，模糊..."
+                multiline={false}
+              />
+
+              {/* Reference Image */}
               <div className="relative">
+                <label className="text-xs text-white/40 mb-1.5 block ml-1">参考图片 (Optional)</label>
                 {!referenceImage ? (
                   <div onClick={() => fileInputRef.current?.click()} className="w-full h-12 border border-dashed border-white/20 rounded-xl bg-white/5 hover:bg-white/10 hover:border-indigo-500/50 transition-all flex items-center justify-center gap-2 cursor-pointer group">
                     <svg className="w-4 h-4 text-white/40 group-hover:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
@@ -326,69 +339,59 @@ function App() {
                 <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/png, image/jpeg, image/webp" className="hidden" />
               </div>
 
-              <Button onClick={handleGenerate} disabled={loading || !combinedPrompt} isLoading={loading} className="w-full py-3 text-lg mt-2">{loading ? '生成中...' : '开始生成'}</Button>
-            </div>
-          </GlassCard>
+              {/* Settings Dropdowns */}
+              <div className="grid grid-cols-2 gap-3">
+                 <div>
+                   <label className="text-xs text-white/40 mb-1.5 block ml-1">图片比例</label>
+                   <div className="relative">
+                      <select 
+                        value={aspectRatio} 
+                        onChange={(e) => setAspectRatio(e.target.value as AspectRatio)}
+                        className="w-full appearance-none bg-black/20 border border-white/10 hover:border-white/20 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/30 transition-all cursor-pointer"
+                      >
+                        {ASPECT_RATIOS.map((r) => (
+                          <option key={r} value={r} className="bg-[#1a1a20] text-white py-1">
+                            {RATIO_LABELS[r] || r}
+                          </option>
+                        ))}
+                      </select>
+                   </div>
+                 </div>
+                 <div>
+                   <label className="text-xs text-white/40 mb-1.5 block ml-1">清晰度</label>
+                   <div className="relative">
+                      <select 
+                        value={quality} 
+                        onChange={(e) => setQuality(e.target.value as ImageQuality)}
+                        className="w-full appearance-none bg-black/20 border border-white/10 hover:border-white/20 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/30 transition-all cursor-pointer"
+                      >
+                        {QUALITIES.map((q) => (
+                          <option key={q} value={q} className="bg-[#1a1a20] text-white py-1">
+                            {q} Ultra HD
+                          </option>
+                        ))}
+                      </select>
+                   </div>
+                 </div>
+              </div>
 
-          <GlassCard title="参数配置">
-             <div className="grid grid-cols-2 gap-4">
-               <div>
-                 <label className="text-xs text-white/50 uppercase font-semibold mb-2 block">图片比例</label>
-                 <div className="relative">
-                    <select 
-                      value={aspectRatio} 
-                      onChange={(e) => setAspectRatio(e.target.value as AspectRatio)}
-                      className="w-full appearance-none bg-black/20 border border-white/10 hover:border-white/20 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all cursor-pointer"
-                    >
-                      {ASPECT_RATIOS.map((r) => (
-                        <option key={r} value={r} className="bg-gray-900 text-white">
-                          {RATIO_LABELS[r] || r}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-white/50">
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                    </div>
-                 </div>
-               </div>
-               
-               <div>
-                 <label className="text-xs text-white/50 uppercase font-semibold mb-2 block">清晰度</label>
-                 <div className="relative">
-                    <select 
-                      value={quality} 
-                      onChange={(e) => setQuality(e.target.value as ImageQuality)}
-                      className="w-full appearance-none bg-black/20 border border-white/10 hover:border-white/20 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all cursor-pointer"
-                    >
-                      {QUALITIES.map((q) => (
-                        <option key={q} value={q} className="bg-gray-900 text-white">
-                          {q} Ultra HD
-                        </option>
-                      ))}
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-white/50">
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                    </div>
-                 </div>
-               </div>
-             </div>
+              <Button onClick={handleGenerate} disabled={loading || !combinedPrompt} isLoading={loading} className="w-full py-3 text-lg shadow-xl shadow-indigo-500/10 hover:shadow-indigo-500/30">{loading ? '生成中...' : '开始绘制'}</Button>
+            </div>
           </GlassCard>
         </div>
 
-        {/* Right Column: Result & History */}
-        <div className="lg:col-span-7 space-y-6">
+        {/* Column 3: Result & History - Span 5 */}
+        <div className="lg:col-span-5 space-y-6">
           <GlassCard className="min-h-[500px] flex flex-col justify-center relative overflow-hidden">
             {error && <div className="absolute top-6 left-6 right-6 z-20 bg-red-500/10 border border-red-500/20 text-red-200 px-4 py-3 rounded-xl backdrop-blur-md shadow-2xl">{error}</div>}
             
-            {!currentResult && !loading && !error && <div className="text-center space-y-4 opacity-50"><p className="text-white/40 text-sm">输入提示词，开始绘制你的梦境</p></div>}
+            {!currentResult && !loading && !error && <div className="text-center space-y-4 opacity-50"><p className="text-white/40 text-sm">Waiting for inspiration...</p></div>}
             
             {(loading || processingSplit) && <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/20 backdrop-blur-sm z-10"><div className="w-16 h-16 rounded-full border-t-2 border-r-2 border-indigo-500 animate-spin"></div></div>}
 
             {currentResult && (
               <div className="relative w-full h-full flex flex-col">
                 <div className="flex-grow flex items-center justify-center bg-black/40 rounded-2xl overflow-hidden mb-4 border border-white/5 relative group">
-                  
-                  {/* View: Split Grid */}
                   {isSplitView && splitImages.length > 0 ? (
                     <div className="w-full h-full max-h-[600px] grid grid-cols-3 gap-1 p-1 bg-black/50 overflow-y-auto">
                         {splitImages.map((src, i) => (
@@ -396,120 +399,57 @@ function App() {
                         ))}
                     </div>
                   ) : (
-                  // View: Single Image
                     <img src={currentResult.cloudUrl || currentResult.localUrl} alt="Result" className="max-h-[600px] w-auto max-w-full object-contain shadow-2xl" />
                   )}
                   
-                  {/* Floating Action Bar (HUD) */}
+                  {/* Floating Action Bar */}
                   <div className="absolute bottom-4 left-4 right-4 bg-black/70 backdrop-blur-xl border border-white/10 rounded-2xl p-2 flex items-center justify-between shadow-2xl z-20 transition-all">
-                     
-                     {/* Left: Info Chips */}
                      <div className="flex items-center gap-2 pl-2">
                         {!isSplitView && (
                           <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/10 border border-white/5 text-[10px] font-mono text-white/90">
-                             <svg className="w-3 h-3 text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
                              {currentResult.width} x {currentResult.height}
                           </div>
                         )}
                         {currentResult.blob && currentResult.blob.size > 0 && !isSplitView && (
                           <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/10 border border-white/5 text-[10px] font-mono text-white/90">
-                             <svg className="w-3 h-3 text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
                              {formatBytes(currentResult.blob.size)}
                           </div>
                         )}
-                        {isSplitView && (
-                           <div className="text-xs font-semibold text-white/80 px-2">九宫格视图</div>
-                        )}
+                        {isSplitView && <div className="text-xs font-semibold text-white/80 px-2">九宫格视图</div>}
                      </div>
 
-                     {/* Right: Actions */}
                      <div className="flex items-center gap-1.5">
-                         
-                         {/* Action Group: Normal View */}
                          {!isSplitView && (
                            <>
-                              {/* Upload */}
                              {!currentResult.cloudUrl ? (
-                                <button 
-                                   onClick={handleUpload} 
-                                   disabled={uploading}
-                                   className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/30 text-indigo-200 hover:text-white transition-all text-xs font-medium disabled:opacity-50"
-                                >
-                                   {uploading ? <span className="animate-spin">C</span> : <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>}
-                                   <span>上传</span>
+                                <button onClick={handleUpload} disabled={uploading} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/30 text-indigo-200 hover:text-white transition-all text-xs font-medium disabled:opacity-50">
+                                   {uploading ? <span className="animate-spin">C</span> : <span>↑</span>} <span>上传</span>
                                 </button>
                              ) : (
                                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-xs font-medium cursor-default">
-                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                                    <span>已同步</span>
+                                    <span>✓ 已同步</span>
                                 </div>
                              )}
-
-                             {/* Split Button */}
-                             <button 
-                                onClick={handleSplitImage}
-                                className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all"
-                                title="九宫格切割"
-                             >
-                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
-                             </button>
-
+                             <button onClick={handleSplitImage} className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all" title="九宫格"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg></button>
                              <div className="w-px h-4 bg-white/10 mx-1"></div>
-
-                             {/* Download */}
-                             <button 
-                                 onClick={handleDownload}
-                                 className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all"
-                                 title="下载原图"
-                             >
-                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                             </button>
-                             
-                             {/* Open Link */}
-                             <a 
-                               href={currentResult.cloudUrl || currentResult.localUrl}
-                               target="_blank"
-                               rel="noreferrer"
-                               className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all"
-                               title="在新标签页打开"
-                             >
-                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                             </a>
+                             <button onClick={handleDownload} className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all" title="下载"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg></button>
+                             <a href={currentResult.cloudUrl || currentResult.localUrl} target="_blank" rel="noreferrer" className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all" title="打开"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg></a>
                            </>
                          )}
-
-                         {/* Action Group: Split View */}
                          {isSplitView && (
                             <>
-                               <button 
-                                 onClick={handleDownloadAllSplit}
-                                 className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/30 text-indigo-200 hover:text-white transition-all text-xs font-medium"
-                               >
-                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                                  <span>一键下载 (9张)</span>
-                               </button>
+                               <button onClick={handleDownloadAllSplit} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/30 text-indigo-200 hover:text-white transition-all text-xs font-medium"><span>一键下载 (9张)</span></button>
                                <div className="w-px h-4 bg-white/10 mx-1"></div>
-                               <button 
-                                 onClick={() => setIsSplitView(false)}
-                                 className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all"
-                                 title="退出九宫格"
-                               >
-                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                               </button>
+                               <button onClick={() => setIsSplitView(false)} className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all" title="退出"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
                             </>
                          )}
                      </div>
                   </div>
                 </div>
-                
-                {/* Footer Meta Info */}
                 <div className="flex justify-between items-center px-2">
                    <div className="flex items-center gap-3">
                       <div className="flex items-center gap-1.5">
-                         <span className="relative flex h-2 w-2">
-                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                           <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                         </span>
+                         <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span>
                          <span className="text-xs text-white/40 font-mono">{(currentResult.generationTime).toFixed(2)}s</span>
                       </div>
                       <span className="text-[10px] text-white/20">|</span>
@@ -522,7 +462,7 @@ function App() {
 
           <GlassCard title="最近创作">
              {history.length === 0 ? <div className="text-white/30 text-sm py-4">暂无历史记录。</div> : 
-               <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4">
+               <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 gap-4">
                  {history.map(item => <HistoryItemCard key={item.id} item={item} onClick={restoreHistoryItem} onDelete={deleteHistoryItem} />)}
                </div>
              }
