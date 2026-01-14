@@ -33,11 +33,11 @@ function App() {
   const [apiKey, setApiKey] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   
-  // Prompt State Split
-  const [promptHeader, setPromptHeader] = useState(''); // 抬头/风格
-  const [promptBody, setPromptBody] = useState('');     // 正文/主体
+  // Prompt State Split (Persisted)
+  const [promptHeader, setPromptHeader] = useState(() => localStorage.getItem('gemini_prompt_header') || ''); 
+  const [promptBody, setPromptBody] = useState(() => localStorage.getItem('gemini_prompt_body') || '');     
   
-  const [negativePrompt, setNegativePrompt] = useState('');
+  const [negativePrompt, setNegativePrompt] = useState(() => localStorage.getItem('gemini_negative_prompt') || '');
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>(() => 
     (localStorage.getItem('gemini_aspect_ratio') as AspectRatio) || AspectRatio.SQUARE
   );
@@ -77,6 +77,9 @@ function App() {
   const combinedPrompt = [promptHeader.trim(), promptBody.trim()].filter(Boolean).join('\n\n');
 
   // --- Effects ---
+  useEffect(() => localStorage.setItem('gemini_prompt_header', promptHeader), [promptHeader]);
+  useEffect(() => localStorage.setItem('gemini_prompt_body', promptBody), [promptBody]);
+  useEffect(() => localStorage.setItem('gemini_negative_prompt', negativePrompt), [negativePrompt]);
   useEffect(() => localStorage.setItem('gemini_aspect_ratio', aspectRatio), [aspectRatio]);
   useEffect(() => localStorage.setItem('gemini_quality', quality), [quality]);
   useEffect(() => {
@@ -303,7 +306,7 @@ function App() {
         </div>
       </nav>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-8rem)]">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(142.8vh-8rem)]">
         
         {/* Column 1: Core Inputs (Header & Body) - Span 3 - Full Height */}
         <div className="lg:col-span-3 h-full min-h-[500px]">
