@@ -49,8 +49,8 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
-  // Computed Prompt
-  const combinedPrompt = `${promptHeader} ${promptBody}`.trim();
+  // Computed Prompt: Join with double newline for visual separation
+  const combinedPrompt = [promptHeader.trim(), promptBody.trim()].filter(Boolean).join('\n\n');
 
   // --- Effects ---
   useEffect(() => localStorage.setItem('gemini_aspect_ratio', aspectRatio), [aspectRatio]);
@@ -300,13 +300,13 @@ function App() {
 
               {/* Dynamic Preview */}
               <div className="bg-white/5 rounded-xl p-3 border border-white/5">
-                <div className="flex justify-between items-center mb-1">
-                   <span className="text-[10px] uppercase text-indigo-300 font-bold tracking-wider">Prompt Preview</span>
+                <div className="flex justify-between items-center mb-2">
+                   <span className="text-[10px] uppercase text-indigo-300 font-bold tracking-wider">最终 Prompt 预览</span>
                    <span className="text-[10px] text-white/30">{combinedPrompt.length} chars</span>
                 </div>
-                <p className={`text-xs leading-relaxed ${combinedPrompt ? 'text-white/80' : 'text-white/20 italic'}`}>
+                <div className={`w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white text-sm whitespace-pre-wrap font-medium leading-relaxed ${combinedPrompt ? 'text-white' : 'text-white/30 italic'}`}>
                    {combinedPrompt || "(等待输入...)"}
-                </p>
+                </div>
               </div>
 
               <input type="text" value={negativePrompt} onChange={(e) => setNegativePrompt(e.target.value)} placeholder="反向提示词 (Negative Prompt)" className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/50 transition-all text-sm" />
