@@ -1,0 +1,484 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { GlassCard } from '../components/GlassCard';
+import { Button } from '../components/Button';
+import { InputWithTools } from '../components/InputWithTools';
+import { HistoryItemCard } from '../components/HistoryItem';
+import { AspectRatio, ImageQuality, HistoryItem, ModelProvider } from '../types';
+import { ASPECT_RATIOS, QUALITIES, SYNTH_ID_NOTICE, RATIO_LABELS } from '../constants';
+import { generateImageBlob, uploadImageBlob, createThumbnail, formatBytes, splitImageToGrid, downloadBatch } from '../utils';
+
+// SVG Icons for Aspect Ratios
+const AspectRatioIcon = ({ ratio }: { ratio: AspectRatio }) => {
+  const common = "stroke-current stroke-2 fill-none";
+  switch (ratio) {
+    case AspectRatio.SQUARE: return <svg className="w-4 h-4" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2" className={common} /></svg>;
+    case AspectRatio.PORTRAIT_3_4: return <svg className="w-4 h-4" viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="16" rx="2" className={common} /></svg>;
+    case AspectRatio.LANDSCAPE_4_3: return <svg className="w-4 h-4" viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="2" className={common} /></svg>;
+    case AspectRatio.PORTRAIT_9_16: return <svg className="w-4 h-4" viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2" className={common} /></svg>;
+    case AspectRatio.LANDSCAPE_16_9: return <svg className="w-4 h-4" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="2" className={common} /></svg>;
+    default: return <svg className="w-4 h-4" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2" className={common} /></svg>;
+  }
+};
+
+interface GridGeneratorViewProps {
+  apiKeys: { gemini: string; modelscope: string };
+  history: HistoryItem[];
+  onSaveHistory: (item: HistoryItem) => void;
+  onDeleteHistory: (id: string) => void;
+  onRequestSettings: () => void;
+}
+
+export const GridGeneratorView: React.FC<GridGeneratorViewProps> = ({ 
+  apiKeys, history, onSaveHistory, onDeleteHistory, onRequestSettings 
+}) => {
+  // Persisted state using original keys to maintain user data
+  const [promptHeader, setPromptHeader] = useState(() => localStorage.getItem('gemini_prompt_header') || ''); 
+  const [promptBody, setPromptBody] = useState(() => localStorage.getItem('gemini_prompt_body') || '');     
+  const [negativePrompt, setNegativePrompt] = useState(() => localStorage.getItem('gemini_negative_prompt') || '');
+  const [aspectRatio, setAspectRatio] = useState<AspectRatio>(() => 
+    (localStorage.getItem('gemini_aspect_ratio') as AspectRatio) || AspectRatio.SQUARE
+  );
+  const [quality, setQuality] = useState<ImageQuality>(() => 
+    (localStorage.getItem('gemini_quality') as ImageQuality) || ImageQuality.Q_1K
+  );
+  const [modelProvider, setModelProvider] = useState<ModelProvider>(() => 
+    (localStorage.getItem('gemini_model_provider') as ModelProvider) || ModelProvider.GEMINI
+  );
+
+  const [referenceImage, setReferenceImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  
+  const [isRatioOpen, setIsRatioOpen] = useState(false);
+  const ratioDropdownRef = useRef<HTMLDivElement>(null);
+
+  const [currentResult, setCurrentResult] = useState<{
+    blob: Blob;
+    localUrl: string;
+    cloudUrl?: string;
+    width: number;
+    height: number;
+    generationTime: number;
+    historyId?: string;
+    provider: ModelProvider;
+  } | null>(null);
+
+  const [splitImages, setSplitImages] = useState<string[]>([]);
+  const [isSplitView, setIsSplitView] = useState(false);
+  const [processingSplit, setProcessingSplit] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const combinedPrompt = [promptHeader.trim(), promptBody.trim()].filter(Boolean).join('\n\n');
+
+  useEffect(() => localStorage.setItem('gemini_prompt_header', promptHeader), [promptHeader]);
+  useEffect(() => localStorage.setItem('gemini_prompt_body', promptBody), [promptBody]);
+  useEffect(() => localStorage.setItem('gemini_negative_prompt', negativePrompt), [negativePrompt]);
+  useEffect(() => localStorage.setItem('gemini_aspect_ratio', aspectRatio), [aspectRatio]);
+  useEffect(() => localStorage.setItem('gemini_quality', quality), [quality]);
+  useEffect(() => localStorage.setItem('gemini_model_provider', modelProvider), [modelProvider]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (ratioDropdownRef.current && !ratioDropdownRef.current.contains(event.target as Node)) {
+        setIsRatioOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      setSplitImages([]);
+      setIsSplitView(false);
+    };
+  }, [currentResult]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) return setError("参考图片不能超过 5MB");
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setReferenceImage(event.target.result as string);
+          setError(null);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleGenerate = async () => {
+    if (modelProvider === ModelProvider.GEMINI && !apiKeys.gemini) {
+      setError("请先配置 Gemini API Key");
+      onRequestSettings();
+      return;
+    }
+    if (modelProvider === ModelProvider.MODELSCOPE && !apiKeys.modelscope) {
+      setError("请先配置 ModelScope Token");
+      onRequestSettings();
+      return;
+    }
+    if (!combinedPrompt) return setError("请输入提示词");
+
+    setLoading(true);
+    setError(null);
+    setCurrentResult(null);
+    setIsSplitView(false);
+    setSplitImages([]);
+    const startTime = Date.now();
+
+    try {
+      const { blob, width, height } = await generateImageBlob(
+        apiKeys, modelProvider, combinedPrompt, negativePrompt.trim() || undefined, aspectRatio, quality, referenceImage
+      );
+
+      const duration = (Date.now() - startTime) / 1000;
+      const localUrl = URL.createObjectURL(blob);
+      const historyId = Date.now().toString();
+
+      const thumb = await createThumbnail(blob);
+      const newItem: HistoryItem = {
+        id: historyId,
+        timestamp: Date.now(),
+        prompt: combinedPrompt,
+        negativePrompt: negativePrompt.trim() || undefined,
+        aspectRatio,
+        quality,
+        provider: modelProvider,
+        thumbnailBase64: thumb,
+        width, height
+      };
+      
+      onSaveHistory(newItem);
+
+      setCurrentResult({
+        blob, localUrl, width, height, generationTime: duration, historyId, provider: modelProvider
+      });
+
+    } catch (err: any) {
+      setError(err.message || "生成失败");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!currentResult || uploading) return;
+    setUploading(true);
+    try {
+      const url = await uploadImageBlob(currentResult.blob);
+      setCurrentResult(prev => prev ? { ...prev, cloudUrl: url } : null);
+      
+      const itemToUpdate = history.find(h => h.id === currentResult.historyId);
+      if (itemToUpdate) {
+        onSaveHistory({ ...itemToUpdate, imageUrl: url });
+      }
+    } catch (e: any) {
+      setError("上传失败: " + e.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDownload = () => {
+    if (!currentResult) return;
+    const link = document.createElement('a');
+    link.href = currentResult.localUrl;
+    link.download = `gemini-3-${Date.now()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleSplitImage = async () => {
+    if (!currentResult || !currentResult.blob) return;
+    setProcessingSplit(true);
+    try {
+        const parts = await splitImageToGrid(currentResult.blob);
+        setSplitImages(parts);
+        setIsSplitView(true);
+    } catch (e) {
+        console.error("Split failed", e);
+        setError("九宫格切割失败");
+    } finally {
+        setProcessingSplit(false);
+    }
+  };
+
+  const handleDownloadAllSplit = () => {
+    if (splitImages.length === 0) return;
+    downloadBatch(splitImages, `gemini-grid-${Date.now()}`);
+  };
+
+  const restoreHistoryItem = (item: HistoryItem) => {
+    setPromptHeader(''); 
+    setPromptBody(item.prompt);
+    setNegativePrompt(item.negativePrompt || '');
+    setAspectRatio(item.aspectRatio);
+    setQuality(item.quality);
+    if (item.provider) setModelProvider(item.provider);
+    
+    setIsSplitView(false);
+    setSplitImages([]);
+    
+    setCurrentResult({
+      blob: new Blob(), 
+      localUrl: item.imageUrl || item.thumbnailBase64,
+      cloudUrl: item.imageUrl,
+      width: item.width,
+      height: item.height,
+      generationTime: 0,
+      historyId: item.id,
+      provider: item.provider || ModelProvider.GEMINI
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full pb-6">
+        
+        {/* Column 1: Core Inputs (Header & Body) - Span 3 - Full Height */}
+        <div className="lg:col-span-3 h-full min-h-[500px] flex flex-col">
+          <GlassCard title="创意输入" className="h-full flex flex-col">
+            <div className="flex-1 flex flex-col gap-5 overflow-hidden">
+              <InputWithTools
+                label="风格前缀 / 抬头 (Header)"
+                value={promptHeader}
+                onChange={setPromptHeader}
+                placeholder="例如：赛博朋克风格，8k分辨率..."
+                multiline={true}
+                fullHeight={true}
+                className="flex-1"
+              />
+
+              <InputWithTools
+                label="画面内容 / 主体 (Body)"
+                value={promptBody}
+                onChange={setPromptBody}
+                placeholder="例如：一只穿着宇航服的猫..."
+                multiline={true}
+                fullHeight={true}
+                className="flex-[3]"
+              />
+            </div>
+          </GlassCard>
+        </div>
+
+        {/* Column 2: Configuration - Span 3 */}
+        <div className="lg:col-span-3 space-y-6 h-full overflow-y-auto custom-scrollbar">
+          <GlassCard title="配置与预览">
+            <div className="space-y-5">
+
+              {/* Model Provider Selection */}
+              <div>
+                <label className="text-xs text-white/40 mb-1.5 block ml-1">绘图模型 (Model)</label>
+                <div className="grid grid-cols-2 gap-2 bg-black/20 p-1 rounded-xl border border-white/10">
+                   <button 
+                     onClick={() => setModelProvider(ModelProvider.GEMINI)}
+                     className={`py-2 rounded-lg text-xs font-medium transition-all ${modelProvider === ModelProvider.GEMINI ? 'bg-indigo-600 text-white shadow-lg' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
+                   >
+                     Gemini 3 Pro
+                   </button>
+                   <button 
+                     onClick={() => setModelProvider(ModelProvider.MODELSCOPE)}
+                     className={`py-2 rounded-lg text-xs font-medium transition-all ${modelProvider === ModelProvider.MODELSCOPE ? 'bg-purple-600 text-white shadow-lg' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
+                   >
+                     Z-Image-Turbo
+                   </button>
+                </div>
+              </div>
+              
+              <InputWithTools
+                label="最终 Prompt 预览"
+                value={combinedPrompt}
+                readOnly={true}
+                multiline={true}
+                minHeight="h-[28rem]"
+                placeholder="(等待输入...)"
+              />
+
+              <InputWithTools
+                label="反向提示词 (Negative)"
+                value={negativePrompt}
+                onChange={setNegativePrompt}
+                placeholder="例如：低质量，变形，模糊..."
+                multiline={false}
+              />
+
+              <div className="relative">
+                <label className="text-xs text-white/40 mb-1.5 block ml-1">参考图片 (Optional)</label>
+                {!referenceImage ? (
+                  <div onClick={() => fileInputRef.current?.click()} className="w-full h-12 border border-dashed border-white/20 rounded-xl bg-white/5 hover:bg-white/10 hover:border-indigo-500/50 transition-all flex items-center justify-center gap-2 cursor-pointer group">
+                    <svg className="w-4 h-4 text-white/40 group-hover:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    <span className="text-xs text-white/40 group-hover:text-white/70">上传参考图</span>
+                  </div>
+                ) : (
+                  <div className="w-full h-12 border border-white/10 rounded-xl bg-black/30 flex items-center justify-between p-1.5 pl-3">
+                    <div className="flex items-center gap-3"><div className="h-8 w-8 rounded overflow-hidden border border-white/20"><img src={referenceImage} alt="Ref" className="w-full h-full object-cover" /></div><span className="text-xs text-white/80">已使用参考图</span></div>
+                    <button onClick={() => { setReferenceImage(null); if (fileInputRef.current) fileInputRef.current.value = ''; }} className="p-1.5 hover:bg-white/10 rounded-lg text-white/40 hover:text-red-400"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                  </div>
+                )}
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/png, image/jpeg, image/webp" className="hidden" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                 <div>
+                   <label className="text-xs text-white/40 mb-1.5 block ml-1">图片比例</label>
+                   <div className="relative" ref={ratioDropdownRef}>
+                      <div 
+                        onClick={() => setIsRatioOpen(!isRatioOpen)}
+                        className="w-full bg-black/20 border border-white/10 hover:border-white/20 rounded-xl px-3 py-2.5 text-xs text-white flex items-center justify-between cursor-pointer transition-all"
+                      >
+                        <div className="flex items-center gap-2">
+                          <AspectRatioIcon ratio={aspectRatio} />
+                          <span>{RATIO_LABELS[aspectRatio]}</span>
+                        </div>
+                        <svg className={`w-4 h-4 text-white/50 transition-transform ${isRatioOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                      </div>
+                      {isRatioOpen && (
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1a20] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden py-1 max-h-60 overflow-y-auto">
+                          {ASPECT_RATIOS.map((r) => (
+                            <div 
+                              key={r}
+                              onClick={() => { setAspectRatio(r); setIsRatioOpen(false); }}
+                              className={`px-3 py-2.5 flex items-center gap-3 hover:bg-white/5 cursor-pointer transition-colors ${aspectRatio === r ? 'bg-indigo-500/20 text-indigo-300' : 'text-white/80'}`}
+                            >
+                              <div className={aspectRatio === r ? 'text-indigo-400' : 'text-white/40'}>
+                                <AspectRatioIcon ratio={r} />
+                              </div>
+                              <span className="text-xs font-medium">{RATIO_LABELS[r]}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                   </div>
+                 </div>
+
+                 <div>
+                   <label className="text-xs text-white/40 mb-1.5 block ml-1">清晰度</label>
+                   <div className="relative">
+                      <select 
+                        value={quality} 
+                        onChange={(e) => setQuality(e.target.value as ImageQuality)}
+                        className="w-full appearance-none bg-black/20 border border-white/10 hover:border-white/20 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/30 transition-all cursor-pointer"
+                      >
+                        {QUALITIES.map((q) => (
+                          <option key={q} value={q} className="bg-[#1a1a20] text-white py-1">
+                            {q} Ultra HD
+                          </option>
+                        ))}
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-white/50">
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                      </div>
+                   </div>
+                 </div>
+              </div>
+
+              <Button onClick={handleGenerate} disabled={loading || !combinedPrompt} isLoading={loading} className="w-full py-3 text-lg shadow-xl shadow-indigo-500/10 hover:shadow-indigo-500/30">{loading ? '生成中...' : '开始绘制'}</Button>
+            </div>
+          </GlassCard>
+        </div>
+
+        {/* Column 3: Result - Span 4 */}
+        <div className="lg:col-span-4 h-full">
+          <GlassCard className="h-full flex flex-col justify-center relative overflow-hidden">
+            {error && <div className="absolute top-6 left-6 right-6 z-20 bg-red-500/10 border border-red-500/20 text-red-200 px-4 py-3 rounded-xl backdrop-blur-md shadow-2xl">{error}</div>}
+            
+            {!currentResult && !loading && !error && <div className="text-center space-y-4 opacity-50"><p className="text-white/40 text-sm">Waiting for inspiration...</p></div>}
+            
+            {(loading || processingSplit) && <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/20 backdrop-blur-sm z-10"><div className="w-16 h-16 rounded-full border-t-2 border-r-2 border-indigo-500 animate-spin"></div></div>}
+
+            {currentResult && (
+              <div className="relative w-full h-full flex flex-col">
+                <div className="flex-grow flex items-center justify-center bg-black/40 rounded-2xl overflow-hidden mb-4 border border-white/5 relative group">
+                  {isSplitView && splitImages.length > 0 ? (
+                    <div className="w-full h-full max-h-[600px] grid grid-cols-3 gap-1 p-1 bg-black/50 overflow-y-auto">
+                        {splitImages.map((src, i) => (
+                            <img key={i} src={src} className="w-full h-full object-cover" alt={`Split ${i}`} />
+                        ))}
+                    </div>
+                  ) : (
+                    <img src={currentResult.cloudUrl || currentResult.localUrl} alt="Result" className="max-h-[600px] w-auto max-w-full object-contain shadow-2xl" />
+                  )}
+                  
+                  {/* Floating Action Bar */}
+                  <div className="absolute bottom-4 left-4 right-4 bg-black/70 backdrop-blur-xl border border-white/10 rounded-2xl p-2 flex items-center justify-between shadow-2xl z-20 transition-all">
+                     <div className="flex items-center gap-2 pl-2">
+                        {!isSplitView && (
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/10 border border-white/5 text-[10px] font-mono text-white/90">
+                             {currentResult.width} x {currentResult.height}
+                          </div>
+                        )}
+                        {currentResult.blob && currentResult.blob.size > 0 && !isSplitView && (
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/10 border border-white/5 text-[10px] font-mono text-white/90">
+                             {formatBytes(currentResult.blob.size)}
+                          </div>
+                        )}
+                        {isSplitView && <div className="text-xs font-semibold text-white/80 px-2">九宫格视图</div>}
+                     </div>
+
+                     <div className="flex items-center gap-1.5">
+                         {!isSplitView && (
+                           <>
+                             {!currentResult.cloudUrl ? (
+                                <button onClick={handleUpload} disabled={uploading} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/30 text-indigo-200 hover:text-white transition-all text-xs font-medium disabled:opacity-50">
+                                   {uploading ? <span className="animate-spin">C</span> : <span>↑</span>} <span>上传</span>
+                                </button>
+                             ) : (
+                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-xs font-medium cursor-default">
+                                    <span>✓ 已同步</span>
+                                </div>
+                             )}
+                             <button onClick={handleSplitImage} className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all" title="九宫格"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg></button>
+                             <div className="w-px h-4 bg-white/10 mx-1"></div>
+                             <button onClick={handleDownload} className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all" title="下载"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg></button>
+                             <a href={currentResult.cloudUrl || currentResult.localUrl} target="_blank" rel="noreferrer" className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all" title="打开"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg></a>
+                           </>
+                         )}
+                         {isSplitView && (
+                            <>
+                               <button onClick={handleDownloadAllSplit} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/30 text-indigo-200 hover:text-white transition-all text-xs font-medium"><span>一键下载 (9张)</span></button>
+                               <div className="w-px h-4 bg-white/10 mx-1"></div>
+                               <button onClick={() => setIsSplitView(false)} className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all" title="退出"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                            </>
+                         )}
+                     </div>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center px-2">
+                   <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5">
+                         <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span>
+                         <span className="text-xs text-white/40 font-mono">{(currentResult.generationTime).toFixed(2)}s</span>
+                      </div>
+                      <span className="text-[10px] text-white/20">|</span>
+                      {currentResult.provider === ModelProvider.GEMINI ? (
+                          <p className="text-[10px] text-white/30 tracking-wide">{SYNTH_ID_NOTICE}</p>
+                      ) : (
+                          <p className="text-[10px] text-purple-300/50 tracking-wide">Generated by ModelScope / Z-Image-Turbo</p>
+                      )}
+                   </div>
+                </div>
+              </div>
+            )}
+          </GlassCard>
+        </div>
+
+        {/* Column 4: History - Span 2 */}
+        <div className="lg:col-span-2 h-full overflow-y-auto custom-scrollbar">
+          <GlassCard title="最近创作" className="min-h-full">
+             {history.length === 0 ? <div className="text-white/30 text-sm py-4">暂无历史记录。</div> : 
+               <div className="grid grid-cols-1 gap-4">
+                 {history.map(item => <HistoryItemCard key={item.id} item={item} onClick={restoreHistoryItem} onDelete={onDeleteHistory} />)}
+               </div>
+             }
+          </GlassCard>
+        </div>
+    </div>
+  );
+};
