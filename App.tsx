@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Sidebar, ViewMode } from './components/Sidebar';
 import { SettingsModal } from './components/SettingsModal';
 import { GridGeneratorView } from './views/GridGeneratorView';
