@@ -39,9 +39,6 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
   
   // FIXED: Only support ModelScope (Z-Image-Turbo) as requested
   const [modelProvider] = useState<ModelProvider>(ModelProvider.MODELSCOPE);
-
-  const [referenceImage, setReferenceImage] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -76,21 +73,6 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) return setError("参考图片不能超过 5MB");
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setReferenceImage(event.target.result as string);
-          setError(null);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   const handleGenerate = async () => {
     // Only check ModelScope key
     if (modelProvider === ModelProvider.MODELSCOPE && !apiKeys.modelscope) {
@@ -106,7 +88,7 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
 
     try {
       const { blob, width, height } = await generateImageBlob(
-        apiKeys, modelProvider, prompt, negativePrompt.trim() || undefined, aspectRatio, quality, referenceImage
+        apiKeys, modelProvider, prompt, negativePrompt.trim() || undefined, aspectRatio, quality, null
       );
 
       const duration = (Date.now() - startTime) / 1000;
@@ -267,22 +249,6 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
                             {QUALITIES.map((q) => <option key={q} value={q} className="bg-[#1a1a20]">{q}</option>)}
                         </select>
                     </div>
-                </div>
-
-                {/* Reference Image */}
-                <div>
-                   <label className="text-xs text-white/40 mb-1.5 block ml-1">参考图</label>
-                   {!referenceImage ? (
-                    <div onClick={() => fileInputRef.current?.click()} className="w-full h-10 border border-dashed border-white/20 rounded-xl bg-white/5 hover:bg-white/10 cursor-pointer flex items-center justify-center gap-2">
-                        <span className="text-[10px] text-white/40">点击上传</span>
-                    </div>
-                   ) : (
-                    <div className="w-full h-10 border border-white/10 rounded-xl bg-black/30 flex items-center justify-between p-1 pl-2">
-                        <span className="text-[10px] text-white/60">已选择图片</span>
-                        <button onClick={() => { setReferenceImage(null); if(fileInputRef.current) fileInputRef.current.value=''; }} className="p-1 hover:text-red-400 text-white/40">×</button>
-                    </div>
-                   )}
-                   <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
                 </div>
             </div>
 
