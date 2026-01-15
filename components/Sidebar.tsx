@@ -1,17 +1,17 @@
 import React from 'react';
-
-export type ViewMode = 'grid' | 'freeform';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 interface SidebarProps {
-  activeMode: ViewMode;
-  onModeChange: (mode: ViewMode) => void;
   onSettingsClick: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeMode, onModeChange, onSettingsClick }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ onSettingsClick }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const menuItems = [
     {
-      id: 'grid' as ViewMode,
+      id: '/grid',
       label: '9宫格图片',
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -20,7 +20,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeMode, onModeChange, onSe
       )
     },
     {
-      id: 'freeform' as ViewMode,
+      id: '/freeform',
       label: '自由生图',
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -38,11 +38,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeMode, onModeChange, onSe
       
       <div className="flex-1 flex flex-col gap-2 px-3">
         {menuItems.map((item) => {
-          const isActive = activeMode === item.id;
+          const isActive = location.pathname === item.id;
           return (
             <button
               key={item.id}
-              onClick={() => onModeChange(item.id)}
+              onClick={() => navigate(item.id)}
               className={`flex items-center gap-2 px-3 py-3 rounded-xl transition-all duration-300 group ${
                 isActive 
                   ? 'bg-gradient-to-r from-indigo-600/20 to-purple-600/20 text-white border border-white/10 shadow-lg shadow-indigo-500/5' 

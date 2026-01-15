@@ -171,8 +171,8 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
   return (
     <div className="flex h-full gap-6">
       
-      {/* Left Column: Inputs (1/3 width) */}
-      <div className="w-1/3 h-full flex flex-col min-w-[360px]">
+      {/* Left Column: Inputs (Width increased by ~30%, from 1/3 (33%) to 43%) */}
+      <div className="w-[43%] h-full flex flex-col min-w-[420px]">
         <GlassCard title="创意参数" className="h-full flex flex-col">
             <div className="flex-1 flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-2">
                 

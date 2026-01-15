@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Sidebar, ViewMode } from './components/Sidebar';
+import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Sidebar } from './components/Sidebar';
 import { SettingsModal } from './components/SettingsModal';
 import { GridGeneratorView } from './views/GridGeneratorView';
 import { FreeformGeneratorView } from './views/FreeformGeneratorView';
@@ -7,15 +8,12 @@ import { HistoryItem } from './types';
 
 const MAX_HISTORY = 20;
 
-function App() {
+function AppContent() {
   // Global State: API Keys & History
   const [apiKeys, setApiKeys] = useState({ gemini: '', modelscope: '' });
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [showSettings, setShowSettings] = useState(false);
   
-  // Navigation State
-  const [activeMode, setActiveMode] = useState<ViewMode>('grid');
-
   // Initialization
   useEffect(() => {
     const savedHistory = localStorage.getItem('gemini_history');
@@ -53,6 +51,13 @@ function App() {
     });
   }, []);
 
+  // Determine title based on location
+  const location = useLocation();
+  const getPageTitle = () => {
+    if (location.pathname.includes('freeform')) return '自由创意工坊';
+    return 'Gemini 3 灵感绘图';
+  };
+
   return (
     <div className="flex h-[83.3333vh] container mx-auto max-w-[1600px] relative z-10 box-border overflow-hidden">
       <SettingsModal
@@ -69,8 +74,6 @@ function App() {
 
       {/* Sidebar Navigation */}
       <Sidebar 
-        activeMode={activeMode} 
-        onModeChange={setActiveMode} 
         onSettingsClick={() => setShowSettings(true)}
       />
 
@@ -81,37 +84,49 @@ function App() {
         <nav className="flex-none flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70 tracking-tight">
-              {activeMode === 'grid' ? 'Gemini 3 灵感绘图' : '自由创意工坊'}
+              {getPageTitle()}
             </h1>
           </div>
           <div className="flex items-center gap-3">
-             <div className="hidden sm:block px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-mono text-white/50">v3.7-MultiView</div>
+             <div className="hidden sm:block px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-mono text-white/50">v3.8-Router</div>
           </div>
         </nav>
 
         {/* View Content */}
         <div className="flex-1 min-h-0">
-          {activeMode === 'grid' ? (
-            <GridGeneratorView 
-              apiKeys={apiKeys} 
-              history={history} 
-              onSaveHistory={saveToHistory}
-              onDeleteHistory={deleteHistoryItem}
-              onRequestSettings={() => setShowSettings(true)}
-            />
-          ) : (
-            <FreeformGeneratorView 
-              apiKeys={apiKeys}
-              history={history}
-              onSaveHistory={saveToHistory}
-              onDeleteHistory={deleteHistoryItem}
-              onRequestSettings={() => setShowSettings(true)}
-            />
-          )}
+          <Routes>
+            <Route path="/grid" element={
+              <GridGeneratorView 
+                apiKeys={apiKeys} 
+                history={history} 
+                onSaveHistory={saveToHistory}
+                onDeleteHistory={deleteHistoryItem}
+                onRequestSettings={() => setShowSettings(true)}
+              />
+            } />
+            <Route path="/freeform" element={
+              <FreeformGeneratorView 
+                apiKeys={apiKeys}
+                history={history}
+                onSaveHistory={saveToHistory}
+                onDeleteHistory={deleteHistoryItem}
+                onRequestSettings={() => setShowSettings(true)}
+              />
+            } />
+            <Route path="*" element={<Navigate to="/grid" replace />} />
+          </Routes>
         </div>
 
       </div>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <HashRouter>
+      <AppContent />
+    </HashRouter>
   );
 }
 
