@@ -36,9 +36,9 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
   const [quality, setQuality] = useState<ImageQuality>(() => 
     (localStorage.getItem('freeform_quality') as ImageQuality) || ImageQuality.Q_1K
   );
-  const [modelProvider, setModelProvider] = useState<ModelProvider>(() => 
-    (localStorage.getItem('freeform_model_provider') as ModelProvider) || ModelProvider.GEMINI
-  );
+  
+  // FIXED: Only support ModelScope (Z-Image-Turbo) as requested
+  const [modelProvider] = useState<ModelProvider>(ModelProvider.MODELSCOPE);
 
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -65,7 +65,6 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
   useEffect(() => localStorage.setItem('freeform_negative_prompt', negativePrompt), [negativePrompt]);
   useEffect(() => localStorage.setItem('freeform_aspect_ratio', aspectRatio), [aspectRatio]);
   useEffect(() => localStorage.setItem('freeform_quality', quality), [quality]);
-  useEffect(() => localStorage.setItem('freeform_model_provider', modelProvider), [modelProvider]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -93,11 +92,7 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
   };
 
   const handleGenerate = async () => {
-    if (modelProvider === ModelProvider.GEMINI && !apiKeys.gemini) {
-      setError("请先配置 Gemini API Key");
-      onRequestSettings();
-      return;
-    }
+    // Only check ModelScope key
     if (modelProvider === ModelProvider.MODELSCOPE && !apiKeys.modelscope) {
       setError("请先配置 ModelScope Token");
       onRequestSettings();
@@ -166,7 +161,7 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
     if (!currentResult) return;
     const link = document.createElement('a');
     link.href = currentResult.localUrl;
-    link.download = `gemini-freeform-${Date.now()}.png`;
+    link.download = `z-image-turbo-${Date.now()}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -177,7 +172,7 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
     setNegativePrompt(item.negativePrompt || '');
     setAspectRatio(item.aspectRatio);
     setQuality(item.quality);
-    if (item.provider) setModelProvider(item.provider);
+    // Note: We do NOT restore the provider to ensure the view stays in "Only Z-Image-Turbo" mode
     
     setCurrentResult({
       blob: new Blob(), 
@@ -199,22 +194,20 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
         <GlassCard title="创意参数" className="h-full flex flex-col">
             <div className="flex-1 flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-2">
                 
-                {/* Model Selection */}
+                {/* Model Indicator (Fixed) */}
                 <div>
                     <label className="text-xs text-white/40 mb-1.5 block ml-1">绘图模型 (Model)</label>
-                    <div className="grid grid-cols-2 gap-2 bg-black/20 p-1 rounded-xl border border-white/10">
-                    <button 
-                        onClick={() => setModelProvider(ModelProvider.GEMINI)}
-                        className={`py-2 rounded-lg text-xs font-medium transition-all ${modelProvider === ModelProvider.GEMINI ? 'bg-indigo-600 text-white shadow-lg' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
-                    >
-                        Gemini 3 Pro
-                    </button>
-                    <button 
-                        onClick={() => setModelProvider(ModelProvider.MODELSCOPE)}
-                        className={`py-2 rounded-lg text-xs font-medium transition-all ${modelProvider === ModelProvider.MODELSCOPE ? 'bg-purple-600 text-white shadow-lg' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
-                    >
-                        Z-Image-Turbo
-                    </button>
+                    <div className="w-full bg-gradient-to-r from-purple-900/40 to-indigo-900/40 border border-purple-500/20 text-purple-200 p-3 rounded-xl text-xs font-medium flex items-center justify-between shadow-sm hover:border-purple-500/40 transition-colors cursor-default">
+                        <div className="flex items-center gap-2">
+                            <div className="p-1 rounded bg-purple-500/20">
+                                <svg className="w-3.5 h-3.5 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                            </div>
+                            <span className="tracking-wide">Z-Image-Turbo</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                             <span className="text-[10px] text-white/40">ModelScope</span>
+                             <span className="w-1.5 h-1.5 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]"></span>
+                        </div>
                     </div>
                 </div>
 
