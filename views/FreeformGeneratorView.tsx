@@ -191,7 +191,7 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
                     onChange={setPrompt}
                     placeholder="描述你想要的画面..."
                     multiline={true}
-                    minHeight="h-48"
+                    minHeight="h-[28rem]"
                     className="flex-shrink-0"
                 />
 
@@ -254,7 +254,8 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
 
       {/* Right Column: Preview Only (Expanded) */}
       <div className="flex-1 h-full min-w-0">
-        <GlassCard noPadding className="h-full flex flex-col justify-center relative overflow-hidden bg-black/40 border-white/10">
+        <GlassCard noPadding className="h-full flex flex-col justify-center items-center relative overflow-hidden bg-black/40 border-white/10 p-6">
+            
             {/* Header for Preview Section */}
             <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-center z-10 pointer-events-none">
                 <span className="text-xs font-bold text-white/30 tracking-wider uppercase bg-black/40 px-2 py-1 rounded backdrop-blur-md">预览画布</span>
@@ -262,53 +263,60 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
 
             {error && <div className="absolute top-12 left-6 right-6 z-20 bg-red-500/10 border border-red-500/20 text-red-200 px-4 py-3 rounded-xl backdrop-blur-md">{error}</div>}
             
-            {loading && <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm z-20"><div className="w-16 h-16 rounded-full border-t-2 border-r-2 border-indigo-500 animate-spin"></div><p className="mt-4 text-white/50 text-sm animate-pulse">正在绘制...</p></div>}
+            {/* Canvas Container that strictly respects Aspect Ratio */}
+            <div 
+                className={`relative shadow-2xl transition-all duration-300 rounded-lg overflow-hidden flex items-center justify-center max-w-full max-h-full ${!currentResult ? 'border-2 border-dashed border-white/10 bg-white/5' : 'bg-black'}`}
+                style={getAspectRatioStyle()}
+            >
+                {loading && (
+                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm z-30">
+                     <div className="w-16 h-16 rounded-full border-t-2 border-r-2 border-indigo-500 animate-spin"></div>
+                     <p className="mt-4 text-white/50 text-sm animate-pulse">正在绘制...</p>
+                   </div>
+                )}
 
-            {!currentResult ? (
-                <div className="w-full h-full flex items-center justify-center p-8">
-                    {/* Placeholder Canvas */}
-                    <div 
-                        className="w-full max-h-full border-2 border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center bg-white/5 backdrop-blur-sm transition-all duration-500"
-                        style={getAspectRatioStyle()}
-                    >
+                {!currentResult ? (
+                    <div className="flex flex-col items-center justify-center p-8 text-center">
                         <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
                             <svg className="w-8 h-8 text-white/30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                         </div>
                         <p className="text-sm font-medium text-white/40">画板准备就绪</p>
                         <p className="text-xs text-white/20 mt-1">尺寸 {RATIO_LABELS[aspectRatio]}</p>
                     </div>
-                </div>
-            ) : (
-                <div className="relative w-full h-full flex items-center justify-center group bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')]">
-                    <img src={currentResult.cloudUrl || currentResult.localUrl} alt="Result" className="w-full h-full object-contain max-h-[calc(100%-2rem)]" />
-                    
-                    {/* Floating Toolbar */}
-                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur-xl border border-white/10 rounded-2xl p-2 flex items-center gap-2 shadow-2xl opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 z-20">
-                        <div className="px-3 text-xs font-mono text-white/60 border-r border-white/10 flex items-center gap-2">
-                            <span>{currentResult.width}x{currentResult.height}</span>
-                            <span className="w-px h-3 bg-white/10"></span>
-                            <span>{formatBytes(currentResult.blob.size)}</span>
-                        </div>
-                        {!currentResult.cloudUrl ? (
-                            <button onClick={handleUpload} disabled={uploading} className="px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 text-xs transition-all">
-                                {uploading ? 'Up...' : '上传'}
+                ) : (
+                    <div className="relative w-full h-full group bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')]">
+                        <img src={currentResult.cloudUrl || currentResult.localUrl} alt="Result" className="w-full h-full object-cover" />
+                        
+                        {/* Floating Toolbar (Only on hover of canvas) */}
+                        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur-xl border border-white/10 rounded-2xl p-2 flex items-center gap-2 shadow-2xl opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 z-20 w-max max-w-[90%]">
+                            <div className="px-3 text-xs font-mono text-white/60 border-r border-white/10 flex items-center gap-2 whitespace-nowrap">
+                                <span>{currentResult.width}x{currentResult.height}</span>
+                                <span className="w-px h-3 bg-white/10"></span>
+                                <span>{formatBytes(currentResult.blob.size)}</span>
+                            </div>
+                            {!currentResult.cloudUrl ? (
+                                <button onClick={handleUpload} disabled={uploading} className="px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 text-xs transition-all whitespace-nowrap">
+                                    {uploading ? 'Up...' : '上传'}
+                                </button>
+                            ) : (
+                                <span className="px-3 text-xs text-green-400 whitespace-nowrap">已同步</span>
+                            )}
+                            <button onClick={handleDownload} className="p-1.5 hover:bg-white/10 rounded-lg text-white/70 flex-shrink-0">
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                             </button>
-                        ) : (
-                            <span className="px-3 text-xs text-green-400">已同步</span>
-                        )}
-                        <button onClick={handleDownload} className="p-1.5 hover:bg-white/10 rounded-lg text-white/70">
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                        </button>
+                        </div>
                     </div>
+                )}
+            </div>
 
-                    {/* SynthID / Model Provider Notice */}
-                    <div className="absolute bottom-2 right-2 z-10">
-                        {currentResult.provider === ModelProvider.GEMINI ? (
-                            <p className="text-[10px] text-white/20 tracking-wide mix-blend-plus-lighter">{SYNTH_ID_NOTICE}</p>
-                        ) : (
-                            <p className="text-[10px] text-purple-300/30 tracking-wide mix-blend-plus-lighter">Generated by ModelScope</p>
-                        )}
-                    </div>
+            {/* SynthID / Model Provider Notice (Outside Canvas for better visibility) */}
+            {currentResult && (
+                <div className="absolute bottom-2 right-4 z-10">
+                    {currentResult.provider === ModelProvider.GEMINI ? (
+                        <p className="text-[10px] text-white/20 tracking-wide mix-blend-plus-lighter">{SYNTH_ID_NOTICE}</p>
+                    ) : (
+                        <p className="text-[10px] text-purple-300/30 tracking-wide mix-blend-plus-lighter">Generated by ModelScope</p>
+                    )}
                 </div>
             )}
         </GlassCard>
