@@ -192,10 +192,10 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
   };
 
   return (
-    <div className="flex h-full gap-6">
+    <div className="grid grid-cols-3 gap-6 h-full">
       
-      {/* Column 1: Inputs (Increased to 33%) */}
-      <div className="w-1/3 h-full flex flex-col min-w-[360px]">
+      {/* Column 1: Inputs */}
+      <div className="h-full flex flex-col min-w-0">
         <GlassCard title="创意参数" className="h-full flex flex-col">
             <div className="flex-1 flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-2">
                 
@@ -301,8 +301,8 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
         </GlassCard>
       </div>
 
-      {/* Column 2: Preview (Remaining space) */}
-      <div className="flex-1 h-full min-w-[400px]">
+      {/* Column 2: Preview */}
+      <div className="h-full flex flex-col min-w-0">
          <GlassCard className="h-full flex flex-col justify-center relative overflow-hidden p-0">
             {error && <div className="absolute top-6 left-6 right-6 z-20 bg-red-500/10 border border-red-500/20 text-red-200 px-4 py-3 rounded-xl backdrop-blur-md">{error}</div>}
             
@@ -348,11 +348,11 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
          </GlassCard>
       </div>
 
-      {/* Column 3: History (20%) */}
-      <div className="w-1/5 h-full min-w-[220px]">
+      {/* Column 3: History */}
+      <div className="h-full flex flex-col min-w-0">
           <GlassCard title="历史记录" className="h-full flex flex-col">
              {history.length === 0 ? <div className="text-white/30 text-sm py-4 text-center">空</div> : 
-               <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-3 pr-1">
+               <div className="flex-1 overflow-y-auto custom-scrollbar grid grid-cols-1 xl:grid-cols-2 gap-4 pr-1 content-start">
                  {history.map(item => <HistoryItemCard key={item.id} item={item} onClick={restoreHistoryItem} onDelete={onDeleteHistory} />)}
                </div>
              }
