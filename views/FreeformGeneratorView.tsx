@@ -192,10 +192,10 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
   };
 
   return (
-    <div className="grid grid-cols-3 gap-6 h-full">
+    <div className="flex h-full gap-6">
       
-      {/* Column 1: Inputs */}
-      <div className="h-full flex flex-col min-w-0">
+      {/* Left Column: Inputs (1/3 width) */}
+      <div className="w-1/3 h-full flex flex-col min-w-[360px]">
         <GlassCard title="创意参数" className="h-full flex flex-col">
             <div className="flex-1 flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-2">
                 
@@ -301,62 +301,67 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
         </GlassCard>
       </div>
 
-      {/* Column 2: Preview */}
-      <div className="h-full flex flex-col min-w-0">
-         <GlassCard className="h-full flex flex-col justify-center relative overflow-hidden p-0">
-            {error && <div className="absolute top-6 left-6 right-6 z-20 bg-red-500/10 border border-red-500/20 text-red-200 px-4 py-3 rounded-xl backdrop-blur-md">{error}</div>}
-            
-            {loading && <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/20 backdrop-blur-sm z-10"><div className="w-16 h-16 rounded-full border-t-2 border-r-2 border-indigo-500 animate-spin"></div></div>}
+      {/* Right Column: Preview + History */}
+      <div className="flex-1 flex flex-col h-full gap-6 min-w-0">
+         
+         {/* Top Right: Preview (Takes ~2/3 of space) */}
+         <div className="flex-[2] min-h-0">
+            <GlassCard className="h-full flex flex-col justify-center relative overflow-hidden p-0">
+                {error && <div className="absolute top-6 left-6 right-6 z-20 bg-red-500/10 border border-red-500/20 text-red-200 px-4 py-3 rounded-xl backdrop-blur-md">{error}</div>}
+                
+                {loading && <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/20 backdrop-blur-sm z-10"><div className="w-16 h-16 rounded-full border-t-2 border-r-2 border-indigo-500 animate-spin"></div></div>}
 
-            {!currentResult ? (
-                <div className="w-full h-full flex items-center justify-center text-white/20">
-                    <p>预览区域</p>
-                </div>
-            ) : (
-                <div className="relative w-full h-full bg-black/40 flex items-center justify-center group">
-                    <img src={currentResult.cloudUrl || currentResult.localUrl} alt="Result" className="w-full h-full object-contain" />
-                    
-                    {/* Floating Toolbar */}
-                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur-xl border border-white/10 rounded-2xl p-2 flex items-center gap-2 shadow-2xl opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 z-20">
-                         <div className="px-3 text-xs font-mono text-white/60 border-r border-white/10 flex items-center gap-2">
-                            <span>{currentResult.width}x{currentResult.height}</span>
-                            <span className="w-px h-3 bg-white/10"></span>
-                            <span>{formatBytes(currentResult.blob.size)}</span>
-                         </div>
-                         {!currentResult.cloudUrl ? (
-                            <button onClick={handleUpload} disabled={uploading} className="px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 text-xs transition-all">
-                                {uploading ? 'Up...' : '上传'}
+                {!currentResult ? (
+                    <div className="w-full h-full flex items-center justify-center text-white/20">
+                        <p>预览区域</p>
+                    </div>
+                ) : (
+                    <div className="relative w-full h-full bg-black/40 flex items-center justify-center group">
+                        <img src={currentResult.cloudUrl || currentResult.localUrl} alt="Result" className="w-full h-full object-contain" />
+                        
+                        {/* Floating Toolbar */}
+                        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur-xl border border-white/10 rounded-2xl p-2 flex items-center gap-2 shadow-2xl opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 z-20">
+                            <div className="px-3 text-xs font-mono text-white/60 border-r border-white/10 flex items-center gap-2">
+                                <span>{currentResult.width}x{currentResult.height}</span>
+                                <span className="w-px h-3 bg-white/10"></span>
+                                <span>{formatBytes(currentResult.blob.size)}</span>
+                            </div>
+                            {!currentResult.cloudUrl ? (
+                                <button onClick={handleUpload} disabled={uploading} className="px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 text-xs transition-all">
+                                    {uploading ? 'Up...' : '上传'}
+                                </button>
+                            ) : (
+                                <span className="px-3 text-xs text-green-400">已同步</span>
+                            )}
+                            <button onClick={handleDownload} className="p-1.5 hover:bg-white/10 rounded-lg text-white/70">
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                             </button>
-                         ) : (
-                             <span className="px-3 text-xs text-green-400">已同步</span>
-                         )}
-                         <button onClick={handleDownload} className="p-1.5 hover:bg-white/10 rounded-lg text-white/70">
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                         </button>
-                    </div>
+                        </div>
 
-                    {/* SynthID / Model Provider Notice */}
-                    <div className="absolute bottom-2 right-2 z-10">
-                        {currentResult.provider === ModelProvider.GEMINI ? (
-                            <p className="text-[10px] text-white/20 tracking-wide mix-blend-plus-lighter">{SYNTH_ID_NOTICE}</p>
-                        ) : (
-                            <p className="text-[10px] text-purple-300/30 tracking-wide mix-blend-plus-lighter">Generated by ModelScope</p>
-                        )}
+                        {/* SynthID / Model Provider Notice */}
+                        <div className="absolute bottom-2 right-2 z-10">
+                            {currentResult.provider === ModelProvider.GEMINI ? (
+                                <p className="text-[10px] text-white/20 tracking-wide mix-blend-plus-lighter">{SYNTH_ID_NOTICE}</p>
+                            ) : (
+                                <p className="text-[10px] text-purple-300/30 tracking-wide mix-blend-plus-lighter">Generated by ModelScope</p>
+                            )}
+                        </div>
                     </div>
+                )}
+            </GlassCard>
+         </div>
+
+         {/* Bottom Right: History (Takes ~1/3 of space) */}
+         <div className="flex-1 min-h-[200px]">
+            <GlassCard title="历史记录" className="h-full flex flex-col">
+                {history.length === 0 ? <div className="text-white/30 text-sm py-4 text-center">空</div> : 
+                <div className="flex-1 overflow-y-auto custom-scrollbar grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pr-1 content-start">
+                    {history.map(item => <HistoryItemCard key={item.id} item={item} onClick={restoreHistoryItem} onDelete={onDeleteHistory} />)}
                 </div>
-            )}
-         </GlassCard>
-      </div>
+                }
+            </GlassCard>
+         </div>
 
-      {/* Column 3: History */}
-      <div className="h-full flex flex-col min-w-0">
-          <GlassCard title="历史记录" className="h-full flex flex-col">
-             {history.length === 0 ? <div className="text-white/30 text-sm py-4 text-center">空</div> : 
-               <div className="flex-1 overflow-y-auto custom-scrollbar grid grid-cols-1 xl:grid-cols-2 gap-4 pr-1 content-start">
-                 {history.map(item => <HistoryItemCard key={item.id} item={item} onClick={restoreHistoryItem} onDelete={onDeleteHistory} />)}
-               </div>
-             }
-          </GlassCard>
       </div>
 
     </div>
