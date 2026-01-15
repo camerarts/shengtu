@@ -22,18 +22,27 @@ interface FreeformGeneratorViewProps {
   onRequestSettings: () => void;
 }
 
+// Configuration specific to Z-Image-Turbo / ModelScope
+// Turbo models are optimized for speed, 4K is usually too heavy or not natively supported well.
+const MODELSCOPE_SUPPORTED_QUALITIES = [ImageQuality.Q_1K, ImageQuality.Q_2K];
+const MODELSCOPE_SUPPORTED_RATIOS = ASPECT_RATIOS; // Keep full ratio support
+
 export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
   apiKeys, history, onSaveHistory, onRequestSettings
 }) => {
   // Uses distinct local storage keys for "freeform" workspace
   const [prompt, setPrompt] = useState(() => localStorage.getItem('freeform_prompt') || '');     
   const [negativePrompt, setNegativePrompt] = useState(() => localStorage.getItem('freeform_negative_prompt') || '');
+  
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>(() => 
     (localStorage.getItem('freeform_aspect_ratio') as AspectRatio) || AspectRatio.SQUARE
   );
-  const [quality, setQuality] = useState<ImageQuality>(() => 
-    (localStorage.getItem('freeform_quality') as ImageQuality) || ImageQuality.Q_1K
-  );
+  
+  // Enhanced initialization: Validate quality against supported list
+  const [quality, setQuality] = useState<ImageQuality>(() => {
+    const saved = localStorage.getItem('freeform_quality') as ImageQuality;
+    return MODELSCOPE_SUPPORTED_QUALITIES.includes(saved) ? saved : ImageQuality.Q_1K;
+  });
   
   // FIXED: Only support ModelScope (Z-Image-Turbo) as requested
   const [modelProvider] = useState<ModelProvider>(ModelProvider.MODELSCOPE);
@@ -208,7 +217,7 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
                             </div>
                             {isRatioOpen && (
                                 <div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1a20] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden py-1 max-h-60 overflow-y-auto">
-                                {ASPECT_RATIOS.map((r) => (
+                                {MODELSCOPE_SUPPORTED_RATIOS.map((r) => (
                                     <div 
                                     key={r}
                                     onClick={() => { setAspectRatio(r); setIsRatioOpen(false); }}
@@ -223,13 +232,13 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
                         </div>
                     </div>
                     <div>
-                        <label className="text-xs text-white/40 mb-1.5 block ml-1">清晰度</label>
+                        <label className="text-xs text-white/40 mb-1.5 block ml-1">清晰度 (Turbo Max 2K)</label>
                         <select 
                             value={quality} 
                             onChange={(e) => setQuality(e.target.value as ImageQuality)}
                             className="w-full appearance-none bg-black/20 border border-white/10 hover:border-white/20 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/30 transition-all cursor-pointer"
                         >
-                            {QUALITIES.map((q) => <option key={q} value={q} className="bg-[#1a1a20]">{q}</option>)}
+                            {MODELSCOPE_SUPPORTED_QUALITIES.map((q) => <option key={q} value={q} className="bg-[#1a1a20]">{q}</option>)}
                         </select>
                     </div>
                 </div>
