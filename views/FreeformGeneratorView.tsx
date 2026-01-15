@@ -154,7 +154,6 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
     setNegativePrompt(item.negativePrompt || '');
     setAspectRatio(item.aspectRatio);
     setQuality(item.quality);
-    // Note: We do NOT restore the provider to ensure the view stays in "Only Z-Image-Turbo" mode
     
     setCurrentResult({
       blob: new Blob(), 
@@ -175,12 +174,12 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
   return (
     <div className="flex h-full gap-6">
       
-      {/* Left Column: Inputs (Width increased by ~30%, from 1/3 (33%) to 43%) */}
+      {/* Left Column: Inputs */}
       <div className="w-[43%] h-full flex flex-col min-w-[420px]">
         <GlassCard title="创意参数" className="h-full flex flex-col">
             <div className="flex-1 flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-2">
                 
-                {/* Model Indicator (Fixed) */}
+                {/* Model Indicator */}
                 <div>
                     <label className="text-xs text-white/40 mb-1.5 block ml-1">绘图模型 (Model)</label>
                     <div className="w-full bg-gradient-to-r from-purple-900/40 to-indigo-900/40 border border-purple-500/20 text-purple-200 p-3 rounded-xl text-xs font-medium flex items-center justify-between shadow-sm hover:border-purple-500/40 transition-colors cursor-default">
@@ -267,18 +266,23 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
       {/* Right Column: Preview + History */}
       <div className="flex-1 flex flex-col h-full gap-6 min-w-0">
          
-         {/* Top Right: Preview (Takes ~2/3 of space) */}
-         <div className="flex-[2] min-h-0">
-            <GlassCard noPadding className="h-full flex flex-col justify-center relative overflow-hidden bg-black/20">
-                {error && <div className="absolute top-6 left-6 right-6 z-20 bg-red-500/10 border border-red-500/20 text-red-200 px-4 py-3 rounded-xl backdrop-blur-md">{error}</div>}
+         {/* Top Right: Preview (Explicitly set flex-grow-2 using style to ensure ratio) */}
+         <div className="min-h-0" style={{ flex: '2 1 0%' }}>
+            <GlassCard noPadding className="h-full flex flex-col justify-center relative overflow-hidden bg-black/40 border-white/10">
+                {/* Header for Preview Section to make it distinct */}
+                <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-center z-10 pointer-events-none">
+                    <span className="text-xs font-bold text-white/30 tracking-wider uppercase bg-black/40 px-2 py-1 rounded backdrop-blur-md">预览画布</span>
+                </div>
+
+                {error && <div className="absolute top-12 left-6 right-6 z-20 bg-red-500/10 border border-red-500/20 text-red-200 px-4 py-3 rounded-xl backdrop-blur-md">{error}</div>}
                 
-                {loading && <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm z-10"><div className="w-16 h-16 rounded-full border-t-2 border-r-2 border-indigo-500 animate-spin"></div></div>}
+                {loading && <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm z-20"><div className="w-16 h-16 rounded-full border-t-2 border-r-2 border-indigo-500 animate-spin"></div><p className="mt-4 text-white/50 text-sm animate-pulse">正在绘制...</p></div>}
 
                 {!currentResult ? (
                     <div className="w-full h-full flex items-center justify-center p-8">
                         {/* Placeholder Canvas */}
                         <div 
-                            className="w-full max-h-full border-2 border-dashed border-white/10 rounded-lg flex flex-col items-center justify-center bg-white/5 backdrop-blur-sm transition-all duration-500"
+                            className="w-full max-h-full border-2 border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center bg-white/5 backdrop-blur-sm transition-all duration-500"
                             style={getAspectRatioStyle()}
                         >
                            <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
@@ -290,7 +294,7 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
                     </div>
                 ) : (
                     <div className="relative w-full h-full flex items-center justify-center group bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')]">
-                        <img src={currentResult.cloudUrl || currentResult.localUrl} alt="Result" className="w-full h-full object-contain" />
+                        <img src={currentResult.cloudUrl || currentResult.localUrl} alt="Result" className="w-full h-full object-contain max-h-[calc(100%-2rem)]" />
                         
                         {/* Floating Toolbar */}
                         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur-xl border border-white/10 rounded-2xl p-2 flex items-center gap-2 shadow-2xl opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 z-20">
@@ -324,8 +328,8 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
             </GlassCard>
          </div>
 
-         {/* Bottom Right: History (Takes ~1/3 of space) */}
-         <div className="flex-1 min-h-[200px]">
+         {/* Bottom Right: History */}
+         <div className="min-h-[200px]" style={{ flex: '1 1 0%' }}>
             <GlassCard title="历史记录" className="h-full flex flex-col">
                 {history.length === 0 ? <div className="text-white/30 text-sm py-4 text-center">空</div> : 
                 <div className="flex-1 overflow-y-auto custom-scrollbar grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pr-1 content-start">
