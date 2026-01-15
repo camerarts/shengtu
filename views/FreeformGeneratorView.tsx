@@ -168,6 +168,10 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
     });
   };
 
+  const getAspectRatioStyle = () => {
+    return { aspectRatio: aspectRatio.replace(':', '/') };
+  };
+
   return (
     <div className="flex h-full gap-6">
       
@@ -265,19 +269,23 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
          
          {/* Top Right: Preview (Takes ~2/3 of space) */}
          <div className="flex-[2] min-h-0">
-            <GlassCard noPadding className="h-full flex flex-col justify-center relative overflow-hidden bg-black/40">
+            <GlassCard noPadding className="h-full flex flex-col justify-center relative overflow-hidden bg-black/20">
                 {error && <div className="absolute top-6 left-6 right-6 z-20 bg-red-500/10 border border-red-500/20 text-red-200 px-4 py-3 rounded-xl backdrop-blur-md">{error}</div>}
                 
-                {loading && <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/20 backdrop-blur-sm z-10"><div className="w-16 h-16 rounded-full border-t-2 border-r-2 border-indigo-500 animate-spin"></div></div>}
+                {loading && <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm z-10"><div className="w-16 h-16 rounded-full border-t-2 border-r-2 border-indigo-500 animate-spin"></div></div>}
 
                 {!currentResult ? (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-white/20 gap-4">
-                        <div className="w-20 h-20 rounded-2xl border-2 border-dashed border-white/10 flex items-center justify-center bg-white/5">
-                           <svg className="w-8 h-8 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                        </div>
-                        <div className="text-center">
+                    <div className="w-full h-full flex items-center justify-center p-8">
+                        {/* Placeholder Canvas */}
+                        <div 
+                            className="w-full max-h-full border-2 border-dashed border-white/10 rounded-lg flex flex-col items-center justify-center bg-white/5 backdrop-blur-sm transition-all duration-500"
+                            style={getAspectRatioStyle()}
+                        >
+                           <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
+                              <svg className="w-8 h-8 text-white/30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                           </div>
                            <p className="text-sm font-medium text-white/40">画板准备就绪</p>
-                           <p className="text-xs text-white/20 mt-1">配置参数并点击生成以预览</p>
+                           <p className="text-xs text-white/20 mt-1">尺寸 {RATIO_LABELS[aspectRatio]}</p>
                         </div>
                     </div>
                 ) : (
