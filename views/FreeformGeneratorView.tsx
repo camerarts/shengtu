@@ -3,7 +3,7 @@ import { GlassCard } from '../components/GlassCard';
 import { Button } from '../components/Button';
 import { InputWithTools } from '../components/InputWithTools';
 import { AspectRatio, ImageQuality, HistoryItem, ModelProvider } from '../types';
-import { ASPECT_RATIOS, QUALITIES, SYNTH_ID_NOTICE, RATIO_LABELS } from '../constants';
+import { ASPECT_RATIOS, SYNTH_ID_NOTICE, RATIO_LABELS } from '../constants';
 import { generateImageBlob, uploadImageBlob, createThumbnail, formatBytes } from '../utils';
 
 // Icons
@@ -191,7 +191,7 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
                     onChange={setPrompt}
                     placeholder="描述你想要的画面..."
                     multiline={true}
-                    minHeight="h-32"
+                    minHeight="h-48"
                     className="flex-shrink-0"
                 />
 
