@@ -194,8 +194,8 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
   return (
     <div className="flex h-full gap-6">
       
-      {/* Column 1: Inputs (25%) */}
-      <div className="w-1/4 h-full flex flex-col min-w-[300px]">
+      {/* Column 1: Inputs (Increased to 33%) */}
+      <div className="w-1/3 h-full flex flex-col min-w-[360px]">
         <GlassCard title="创意参数" className="h-full flex flex-col">
             <div className="flex-1 flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-2">
                 
@@ -301,7 +301,7 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
         </GlassCard>
       </div>
 
-      {/* Column 2: Preview (55%) */}
+      {/* Column 2: Preview (Remaining space) */}
       <div className="flex-1 h-full min-w-[400px]">
          <GlassCard className="h-full flex flex-col justify-center relative overflow-hidden p-0">
             {error && <div className="absolute top-6 left-6 right-6 z-20 bg-red-500/10 border border-red-500/20 text-red-200 px-4 py-3 rounded-xl backdrop-blur-md">{error}</div>}
