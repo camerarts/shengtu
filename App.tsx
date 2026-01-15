@@ -51,6 +51,13 @@ function AppContent() {
     });
   }, []);
 
+  const clearHistory = useCallback(() => {
+    if (window.confirm('确定要清空所有历史记录吗？')) {
+        setHistory([]);
+        localStorage.removeItem('gemini_history');
+    }
+  }, []);
+
   // Determine title based on location
   const location = useLocation();
   const getPageTitle = () => {
@@ -110,6 +117,7 @@ function AppContent() {
                 history={history}
                 onSaveHistory={saveToHistory}
                 onDeleteHistory={deleteHistoryItem}
+                onClearHistory={clearHistory}
                 onRequestSettings={() => setShowSettings(true)}
               />
             } />

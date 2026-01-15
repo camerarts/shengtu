@@ -21,11 +21,12 @@ interface FreeformGeneratorViewProps {
   history: HistoryItem[];
   onSaveHistory: (item: HistoryItem) => void;
   onDeleteHistory: (id: string) => void;
+  onClearHistory: () => void;
   onRequestSettings: () => void;
 }
 
 export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
-  apiKeys, history, onSaveHistory, onDeleteHistory, onRequestSettings
+  apiKeys, history, onSaveHistory, onDeleteHistory, onClearHistory, onRequestSettings
 }) => {
   // Uses distinct local storage keys for "freeform" workspace
   const [prompt, setPrompt] = useState(() => localStorage.getItem('freeform_prompt') || '');     
@@ -330,7 +331,22 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
 
          {/* Bottom Right: History */}
          <div className="min-h-[200px]" style={{ flex: '1 1 0%' }}>
-            <GlassCard title="历史记录" className="h-full flex flex-col">
+            <GlassCard 
+                title="历史记录" 
+                className="h-full flex flex-col"
+                headerAction={
+                    history.length > 0 && (
+                        <button 
+                            onClick={onClearHistory}
+                            className="text-xs text-red-300/70 hover:text-red-300 hover:bg-red-500/10 px-2 py-1 rounded transition-colors flex items-center gap-1 border border-transparent hover:border-red-500/20"
+                            title="清空所有记录"
+                        >
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            清空
+                        </button>
+                    )
+                }
+            >
                 {history.length === 0 ? <div className="text-white/30 text-sm py-4 text-center">空</div> : 
                 <div className="flex-1 overflow-y-auto custom-scrollbar grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pr-1 content-start">
                     {history.map(item => <HistoryItemCard key={item.id} item={item} onClick={restoreHistoryItem} onDelete={onDeleteHistory} />)}
