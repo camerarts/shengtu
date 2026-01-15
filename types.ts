@@ -12,11 +12,17 @@ export enum ImageQuality {
   Q_4K = "4K"
 }
 
+export enum ModelProvider {
+  GEMINI = "Gemini 3 Pro",
+  MODELSCOPE = "Z-Image-Turbo"
+}
+
 export interface GenerateImageRequest {
   prompt: string;
   negativePrompt?: string;
   aspectRatio: AspectRatio;
   quality: ImageQuality;
+  provider?: ModelProvider;
 }
 
 export interface GenerateImageResponse {
@@ -32,6 +38,7 @@ export interface HistoryItem {
   negativePrompt?: string;
   aspectRatio: AspectRatio;
   quality: ImageQuality;
+  provider?: ModelProvider; // Track which model created this
   thumbnailBase64: string; // We ALWAYS store a small resized thumbnail for history list
   imageUrl?: string;       // The R2 URL (if uploaded)
   width: number;

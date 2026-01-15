@@ -4,7 +4,7 @@ import { Button } from './components/Button';
 import { InputWithTools } from './components/InputWithTools';
 import { HistoryItemCard } from './components/HistoryItem';
 import { SettingsModal } from './components/SettingsModal';
-import { AspectRatio, ImageQuality, HistoryItem } from './types';
+import { AspectRatio, ImageQuality, HistoryItem, ModelProvider } from './types';
 import { ASPECT_RATIOS, QUALITIES, SYNTH_ID_NOTICE, RATIO_LABELS } from './constants';
 import { generateImageBlob, uploadImageBlob, createThumbnail, formatBytes, splitImageToGrid, downloadBatch } from './utils';
 
@@ -30,7 +30,7 @@ const AspectRatioIcon = ({ ratio }: { ratio: AspectRatio }) => {
 };
 
 function App() {
-  const [apiKey, setApiKey] = useState('');
+  const [apiKeys, setApiKeys] = useState({ gemini: '', modelscope: '' });
   const [showSettings, setShowSettings] = useState(false);
   
   // Prompt State Split (Persisted)
@@ -44,6 +44,12 @@ function App() {
   const [quality, setQuality] = useState<ImageQuality>(() => 
     (localStorage.getItem('gemini_quality') as ImageQuality) || ImageQuality.Q_1K
   );
+  
+  // New: Model Provider State
+  const [modelProvider, setModelProvider] = useState<ModelProvider>(() => 
+    (localStorage.getItem('gemini_model_provider') as ModelProvider) || ModelProvider.GEMINI
+  );
+
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -63,6 +69,7 @@ function App() {
     height: number;
     generationTime: number;
     historyId?: string; // To update history later
+    provider: ModelProvider;
   } | null>(null);
 
   // Split View State
@@ -82,13 +89,19 @@ function App() {
   useEffect(() => localStorage.setItem('gemini_negative_prompt', negativePrompt), [negativePrompt]);
   useEffect(() => localStorage.setItem('gemini_aspect_ratio', aspectRatio), [aspectRatio]);
   useEffect(() => localStorage.setItem('gemini_quality', quality), [quality]);
+  useEffect(() => localStorage.setItem('gemini_model_provider', modelProvider), [modelProvider]);
+
   useEffect(() => {
     const savedHistory = localStorage.getItem('gemini_history');
     if (savedHistory) {
       try { setHistory(JSON.parse(savedHistory)); } catch (e) {}
     }
-    const savedKey = localStorage.getItem('gemini_api_key');
-    if (savedKey) setApiKey(savedKey);
+    const savedGeminiKey = localStorage.getItem('gemini_api_key');
+    const savedModelScopeKey = localStorage.getItem('modelscope_api_key');
+    setApiKeys({ 
+      gemini: savedGeminiKey || '', 
+      modelscope: savedModelScopeKey || '' 
+    });
 
     // Click outside handler for dropdown
     const handleClickOutside = (event: MouseEvent) => {
@@ -148,8 +161,13 @@ function App() {
   };
 
   const handleGenerate = async () => {
-    if (!apiKey) {
-      setError("请先配置 API Key");
+    if (modelProvider === ModelProvider.GEMINI && !apiKeys.gemini) {
+      setError("请先配置 Gemini API Key");
+      setShowSettings(true);
+      return;
+    }
+    if (modelProvider === ModelProvider.MODELSCOPE && !apiKeys.modelscope) {
+      setError("请先配置 ModelScope Token");
       setShowSettings(true);
       return;
     }
@@ -165,7 +183,13 @@ function App() {
     try {
       // 1. Generate Blob (Local)
       const { blob, width, height } = await generateImageBlob(
-        apiKey, combinedPrompt, negativePrompt.trim() || undefined, aspectRatio, quality, referenceImage
+        apiKeys, 
+        modelProvider,
+        combinedPrompt, 
+        negativePrompt.trim() || undefined, 
+        aspectRatio, 
+        quality, 
+        referenceImage
       );
 
       const duration = (Date.now() - startTime) / 1000;
@@ -182,6 +206,7 @@ function App() {
         negativePrompt: negativePrompt.trim() || undefined,
         aspectRatio,
         quality,
+        provider: modelProvider,
         thumbnailBase64: thumb, // Save small thumb
         imageUrl: undefined,    // No cloud URL yet
         width, height
@@ -195,7 +220,8 @@ function App() {
         width,
         height,
         generationTime: duration,
-        historyId
+        historyId,
+        provider: modelProvider
       });
 
     } catch (err: any) {
@@ -265,6 +291,7 @@ function App() {
     setNegativePrompt(item.negativePrompt || '');
     setAspectRatio(item.aspectRatio);
     setQuality(item.quality);
+    if (item.provider) setModelProvider(item.provider);
     
     // Reset Views
     setIsSplitView(false);
@@ -277,18 +304,24 @@ function App() {
       width: item.width,
       height: item.height,
       generationTime: 0,
-      historyId: item.id
+      historyId: item.id,
+      provider: item.provider || ModelProvider.GEMINI
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
-    <div className="flex flex-col h-[142.857vh] container mx-auto px-4 py-6 max-w-[1400px] relative z-10 box-border">
+    <div className="flex flex-col h-[83.3333vh] container mx-auto px-4 py-6 max-w-[1400px] relative z-10 box-border">
       <SettingsModal
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
-        onSave={(k) => { setApiKey(k); setShowSettings(false); localStorage.setItem('gemini_api_key', k); }}
-        initialKey={apiKey}
+        onSave={(keys) => { 
+          setApiKeys(keys); 
+          setShowSettings(false); 
+          localStorage.setItem('gemini_api_key', keys.gemini);
+          localStorage.setItem('modelscope_api_key', keys.modelscope);
+        }}
+        initialKeys={apiKeys}
       />
 
       <nav className="flex-none flex items-center justify-between mb-8">
@@ -309,7 +342,7 @@ function App() {
       {/* Grid fills remaining space via flex-1 */}
       <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        {/* Column 1: Core Inputs */}
+        {/* Column 1: Core Inputs (Header & Body) - Span 3 - Full Height */}
         <div className="lg:col-span-3 h-full min-h-[500px] flex flex-col">
           <GlassCard title="创意输入" className="h-full flex flex-col">
             <div className="flex-1 flex flex-col gap-5 overflow-hidden">
@@ -336,18 +369,37 @@ function App() {
           </GlassCard>
         </div>
 
-        {/* Column 2: Final Prompt & Configuration */}
-        <div className="lg:col-span-4 space-y-6 h-full overflow-y-auto custom-scrollbar pb-6">
+        {/* Column 2: Configuration - Span 3 */}
+        <div className="lg:col-span-3 space-y-6 h-full overflow-y-auto custom-scrollbar pb-6">
           <GlassCard title="配置与预览">
             <div className="space-y-5">
+
+              {/* Model Provider Selection */}
+              <div>
+                <label className="text-xs text-white/40 mb-1.5 block ml-1">绘图模型 (Model)</label>
+                <div className="grid grid-cols-2 gap-2 bg-black/20 p-1 rounded-xl border border-white/10">
+                   <button 
+                     onClick={() => setModelProvider(ModelProvider.GEMINI)}
+                     className={`py-2 rounded-lg text-xs font-medium transition-all ${modelProvider === ModelProvider.GEMINI ? 'bg-indigo-600 text-white shadow-lg' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
+                   >
+                     Gemini 3 Pro
+                   </button>
+                   <button 
+                     onClick={() => setModelProvider(ModelProvider.MODELSCOPE)}
+                     className={`py-2 rounded-lg text-xs font-medium transition-all ${modelProvider === ModelProvider.MODELSCOPE ? 'bg-purple-600 text-white shadow-lg' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
+                   >
+                     Z-Image-Turbo
+                   </button>
+                </div>
+              </div>
               
               {/* Computed Prompt Preview (ReadOnly) */}
               <InputWithTools
-                label="最终 Prompt 预览 (自动生成)"
+                label="最终 Prompt 预览"
                 value={combinedPrompt}
                 readOnly={true}
                 multiline={true}
-                minHeight="h-[48rem]"
+                minHeight="h-[28rem]"
                 placeholder="(等待输入...)"
               />
 
@@ -440,9 +492,9 @@ function App() {
           </GlassCard>
         </div>
 
-        {/* Column 3: Result & History */}
-        <div className="lg:col-span-5 space-y-6 h-full overflow-y-auto custom-scrollbar pb-6">
-          <GlassCard className="min-h-[500px] flex flex-col justify-center relative overflow-hidden">
+        {/* Column 3: Result - Span 4 */}
+        <div className="lg:col-span-4 h-full pb-6">
+          <GlassCard className="h-full flex flex-col justify-center relative overflow-hidden">
             {error && <div className="absolute top-6 left-6 right-6 z-20 bg-red-500/10 border border-red-500/20 text-red-200 px-4 py-3 rounded-xl backdrop-blur-md shadow-2xl">{error}</div>}
             
             {!currentResult && !loading && !error && <div className="text-center space-y-4 opacity-50"><p className="text-white/40 text-sm">Waiting for inspiration...</p></div>}
@@ -513,21 +565,29 @@ function App() {
                          <span className="text-xs text-white/40 font-mono">{(currentResult.generationTime).toFixed(2)}s</span>
                       </div>
                       <span className="text-[10px] text-white/20">|</span>
-                      <p className="text-[10px] text-white/30 tracking-wide">{SYNTH_ID_NOTICE}</p>
+                      {currentResult.provider === ModelProvider.GEMINI ? (
+                          <p className="text-[10px] text-white/30 tracking-wide">{SYNTH_ID_NOTICE}</p>
+                      ) : (
+                          <p className="text-[10px] text-purple-300/50 tracking-wide">Generated by ModelScope / Z-Image-Turbo</p>
+                      )}
                    </div>
                 </div>
               </div>
             )}
           </GlassCard>
+        </div>
 
-          <GlassCard title="最近创作">
+        {/* Column 4: History - Span 2 */}
+        <div className="lg:col-span-2 h-full overflow-y-auto custom-scrollbar pb-6">
+          <GlassCard title="最近创作" className="min-h-full">
              {history.length === 0 ? <div className="text-white/30 text-sm py-4">暂无历史记录。</div> : 
-               <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 gap-4">
+               <div className="grid grid-cols-1 gap-4">
                  {history.map(item => <HistoryItemCard key={item.id} item={item} onClick={restoreHistoryItem} onDelete={deleteHistoryItem} />)}
                </div>
              }
           </GlassCard>
         </div>
+
       </div>
     </div>
   );

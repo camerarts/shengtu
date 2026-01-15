@@ -1,4 +1,4 @@
-import { AspectRatio, ImageQuality } from './types';
+import { AspectRatio, ImageQuality, ModelProvider } from './types';
 
 export function getDimensions(aspectRatio: AspectRatio | string, quality: ImageQuality): { width: number; height: number } {
   // Used for UI display logic
@@ -24,7 +24,8 @@ export function formatBytes(bytes: number, decimals = 2) {
 
 // 1. Generate: Returns Blob and dimensions
 export async function generateImageBlob(
-  apiKey: string,
+  apiKeys: { gemini: string; modelscope: string },
+  provider: ModelProvider,
   prompt: string,
   negativePrompt: string | undefined,
   aspectRatio: AspectRatio,
@@ -32,29 +33,51 @@ export async function generateImageBlob(
   referenceImageBase64?: string | null
 ): Promise<{ blob: Blob; width: number; height: number }> {
   
-  const response = await fetch('/api/generate-image', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-    body: JSON.stringify({ prompt, negativePrompt, aspectRatio, quality, referenceImageBase64 })
-  });
+  if (provider === ModelProvider.MODELSCOPE) {
+    // ModelScope Path
+    const { width, height } = getDimensions(aspectRatio, quality);
+    const finalPrompt = negativePrompt ? `${prompt} --no ${negativePrompt}` : prompt; // Basic negative prompt handling via text
 
-  if (!response.ok) {
-    let msg = 'Generation failed';
-    try {
-      const json = await response.json();
-      msg = json.error?.message || msg;
-    } catch(e) {}
-    throw new Error(msg);
+    const response = await fetch('/api/generate-modelscope', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-modelscope-key': apiKeys.modelscope },
+        body: JSON.stringify({ prompt: finalPrompt, width, height }) // Pass dims for worker to echo back
+    });
+
+    if (!response.ok) {
+        let msg = 'ModelScope Generation failed';
+        try { const json = await response.json(); msg = json.error?.message || msg; } catch(e) {}
+        throw new Error(msg);
+    }
+
+    const blob = await response.blob();
+    const w = parseInt(response.headers.get('X-Image-Width') || width.toString());
+    const h = parseInt(response.headers.get('X-Image-Height') || height.toString());
+    return { blob, width: w, height: h };
+
+  } else {
+    // Gemini Path (Default)
+    const response = await fetch('/api/generate-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKeys.gemini },
+      body: JSON.stringify({ prompt, negativePrompt, aspectRatio, quality, referenceImageBase64 })
+    });
+
+    if (!response.ok) {
+      let msg = 'Generation failed';
+      try {
+        const json = await response.json();
+        msg = json.error?.message || msg;
+      } catch(e) {}
+      throw new Error(msg);
+    }
+
+    const blob = await response.blob();
+    const w = parseInt(response.headers.get('X-Image-Width') || '0');
+    const h = parseInt(response.headers.get('X-Image-Height') || '0');
+
+    return { blob, width: w || 1024, height: h || 1024 };
   }
-
-  // Read raw blob
-  const blob = await response.blob();
-  
-  // Read dims from header
-  const w = parseInt(response.headers.get('X-Image-Width') || '0');
-  const h = parseInt(response.headers.get('X-Image-Height') || '0');
-
-  return { blob, width: w || 1024, height: h || 1024 };
 }
 
 // 2. Upload: Sends Blob, returns URL
@@ -135,11 +158,6 @@ export async function splitImageToGrid(blob: Blob): Promise<string[]> {
             0, 0, pieceWidth, pieceHeight // Dest
           );
           
-          // We use dataURL here for simplicity in this context, 
-          // but for huge images, converting each to Blob + ObjectURL is more memory efficient.
-          // Given the use case, DataURL is acceptable, but let's stick to Blob for consistency if we can,
-          // however, toDataURL is synchronous-ish and easier for "immediate" array return without complex async loops.
-          // Let's use toDataURL for instant React rendering compatibility.
           pieces.push(canvas.toDataURL('image/png'));
         }
       }

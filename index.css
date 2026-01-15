@@ -11,11 +11,11 @@
   }
 }
 
-/* Scale the entire app to 70% as requested */
+/* Scale the entire app to 120% as requested */
 #root {
-  width: 142.857%; /* 100% / 0.7 */
-  min-height: 142.857vh; /* 100vh / 0.7 */
-  transform: scale(0.7);
+  width: 83.3333%; /* 100% / 1.2 */
+  min-height: 83.3333vh; /* 100vh / 1.2 */
+  transform: scale(1.2);
   transform-origin: top left;
 }
 
