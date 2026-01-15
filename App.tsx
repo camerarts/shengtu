@@ -116,8 +116,6 @@ function AppContent() {
                 apiKeys={apiKeys}
                 history={history}
                 onSaveHistory={saveToHistory}
-                onDeleteHistory={deleteHistoryItem}
-                onClearHistory={clearHistory}
                 onRequestSettings={() => setShowSettings(true)}
               />
             } />

@@ -19,13 +19,11 @@ interface FreeformGeneratorViewProps {
   apiKeys: { gemini: string; modelscope: string };
   history: HistoryItem[];
   onSaveHistory: (item: HistoryItem) => void;
-  onDeleteHistory: (id: string) => void;
-  onClearHistory: () => void;
   onRequestSettings: () => void;
 }
 
 export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
-  apiKeys, history, onSaveHistory, onDeleteHistory, onClearHistory, onRequestSettings
+  apiKeys, history, onSaveHistory, onRequestSettings
 }) => {
   // Uses distinct local storage keys for "freeform" workspace
   const [prompt, setPrompt] = useState(() => localStorage.getItem('freeform_prompt') || '');     
