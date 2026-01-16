@@ -39,10 +39,19 @@ export const onRequestPost = async (context: any) => {
     // Validation
     if (!prompt) throw new Error("Prompt is required");
 
-    // Enforce prompt length limit strictly to avoid 400 errors
-    // API Limit is ~2000 chars. We truncate to 1800 to be safe with multi-byte chars or overhead.
-    if (prompt.length > 1800) {
-        prompt = prompt.substring(0, 1800);
+    // Enforce prompt length limit STRICTLY.
+    // The API error "prompt length more than 2000" likely refers to bytes (UTF-8) or token limit.
+    // For Chinese characters (3 bytes), 1800 chars = 5400 bytes, which fails.
+    // 600 chars * 3 = 1800 bytes < 2000.
+    // We set a conservative limit of 600 characters for the main prompt.
+    const MAX_PROMPT_CHARS = 600;
+    if (prompt.length > MAX_PROMPT_CHARS) {
+        prompt = prompt.substring(0, MAX_PROMPT_CHARS);
+    }
+    
+    // Also truncate negative prompt
+    if (negative_prompt && negative_prompt.length > 300) {
+        negative_prompt = negative_prompt.substring(0, 300);
     }
 
     const baseUrl = 'https://api-inference.modelscope.cn/';
