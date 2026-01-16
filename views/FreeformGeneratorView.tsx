@@ -4,7 +4,7 @@ import { Button } from '../components/Button';
 import { InputWithTools } from '../components/InputWithTools';
 import { AspectRatio, ImageQuality, HistoryItem, ModelProvider } from '../types';
 import { ASPECT_RATIOS, SYNTH_ID_NOTICE, RATIO_LABELS } from '../constants';
-import { generateImageBlob, uploadImageBlob, createThumbnail, formatBytes } from '../utils';
+import { generateImageBlob, uploadImageBlob, createThumbnail, formatBytes, getDimensions } from '../utils';
 
 // Icons
 const AspectRatioIcon = ({ ratio }: { ratio: AspectRatio }) => {
@@ -176,6 +176,8 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
     return { aspectRatio: aspectRatio.replace(':', '/') };
   };
 
+  const getDims = (r: AspectRatio) => getDimensions(r, quality);
+
   return (
     <div className="flex h-full gap-6">
       
@@ -228,21 +230,32 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
                                 onClick={() => setIsRatioOpen(!isRatioOpen)}
                                 className="w-full bg-black/20 border border-white/10 hover:border-white/20 rounded-xl px-3 py-2.5 text-xs text-white flex items-center justify-between cursor-pointer transition-all"
                             >
-                                <span className="truncate">{RATIO_LABELS[aspectRatio]}</span>
+                                <span className="truncate flex items-center gap-2">
+                                    {RATIO_LABELS[aspectRatio]} 
+                                    <span className="text-white/30 text-[10px] font-mono">
+                                      ({getDims(aspectRatio).width}x{getDims(aspectRatio).height})
+                                    </span>
+                                </span>
                                 <svg className={`w-3 h-3 text-white/50 transition-transform ${isRatioOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                             </div>
                             {isRatioOpen && (
                                 <div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1a20] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden py-1 max-h-60 overflow-y-auto">
-                                {MODELSCOPE_SUPPORTED_RATIOS.map((r) => (
-                                    <div 
-                                    key={r}
-                                    onClick={() => { setAspectRatio(r); setIsRatioOpen(false); }}
-                                    className={`px-3 py-2.5 flex items-center gap-2 hover:bg-white/5 cursor-pointer ${aspectRatio === r ? 'bg-indigo-500/20 text-indigo-300' : 'text-white/80'}`}
-                                    >
-                                    <AspectRatioIcon ratio={r} />
-                                    <span className="text-xs font-medium">{RATIO_LABELS[r]}</span>
-                                    </div>
-                                ))}
+                                {MODELSCOPE_SUPPORTED_RATIOS.map((r) => {
+                                    const d = getDims(r);
+                                    return (
+                                        <div 
+                                        key={r}
+                                        onClick={() => { setAspectRatio(r); setIsRatioOpen(false); }}
+                                        className={`px-3 py-2.5 flex items-center gap-2 hover:bg-white/5 cursor-pointer ${aspectRatio === r ? 'bg-indigo-500/20 text-indigo-300' : 'text-white/80'}`}
+                                        >
+                                        <AspectRatioIcon ratio={r} />
+                                        <span className="text-xs font-medium flex items-center gap-2 w-full justify-between">
+                                            {RATIO_LABELS[r]}
+                                            <span className="text-[9px] font-mono opacity-40">{d.width}x{d.height}</span>
+                                        </span>
+                                        </div>
+                                    );
+                                })}
                                 </div>
                             )}
                         </div>
@@ -297,7 +310,7 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
                             <svg className="w-8 h-8 text-white/30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                         </div>
                         <p className="text-sm font-medium text-white/40">画板准备就绪</p>
-                        <p className="text-xs text-white/20 mt-1">尺寸 {RATIO_LABELS[aspectRatio]}</p>
+                        <p className="text-xs text-white/20 mt-1">尺寸 {RATIO_LABELS[aspectRatio]} <span className="opacity-50">({getDims(aspectRatio).width}x{getDims(aspectRatio).height})</span></p>
                     </div>
                 ) : (
                     <div className="relative w-full h-full group bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')]">

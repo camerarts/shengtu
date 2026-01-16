@@ -6,8 +6,9 @@ export function getDimensions(aspectRatio: AspectRatio | string, quality: ImageQ
     "1:1": { "1K": { w: 1024, h: 1024 }, "2K": { w: 2048, h: 2048 }, "4K": { w: 4096, h: 4096 } },
     "3:4": { "1K": { w: 768, h: 1024 }, "2K": { w: 1536, h: 2048 }, "4K": { w: 3072, h: 4096 } },
     "4:3": { "1K": { w: 1024, h: 768 }, "2K": { w: 2048, h: 1536 }, "4K": { w: 4096, h: 3072 } },
-    "9:16": { "1K": { w: 576, h: 1024 }, "2K": { w: 1152, h: 2048 }, "4K": { w: 2304, h: 4096 } },
-    "16:9": { "1K": { w: 1024, h: 576 }, "2K": { w: 2048, h: 1152 }, "4K": { w: 4096, h: 2304 } }
+    // Updated to standard HD (720p based) for better compatibility
+    "9:16": { "1K": { w: 720, h: 1280 }, "2K": { w: 1440, h: 2560 }, "4K": { w: 2160, h: 3840 } },
+    "16:9": { "1K": { w: 1280, h: 720 }, "2K": { w: 2560, h: 1440 }, "4K": { w: 3840, h: 2160 } }
   };
   const d = map[aspectRatio]?.[quality] || map["1:1"]["1K"];
   return { width: d.w, height: d.h };
@@ -36,12 +37,16 @@ export async function generateImageBlob(
   if (provider === ModelProvider.MODELSCOPE) {
     // ModelScope Path
     const { width, height } = getDimensions(aspectRatio, quality);
-    const finalPrompt = negativePrompt ? `${prompt} --no ${negativePrompt}` : prompt; // Basic negative prompt handling via text
-
+    // Send prompt and negative_prompt separately, do not merge them
     const response = await fetch('/api/generate-modelscope', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-modelscope-key': apiKeys.modelscope },
-        body: JSON.stringify({ prompt: finalPrompt, width, height }) // Pass dims for worker to echo back
+        body: JSON.stringify({ 
+          prompt, 
+          negative_prompt: negativePrompt, 
+          width, 
+          height 
+        })
     });
 
     if (!response.ok) {

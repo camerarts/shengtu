@@ -34,7 +34,12 @@ export const onRequestPost = async (context: any) => {
     if (!apiKey) throw new Error("Missing ModelScope API Key");
 
     const body: any = await request.json();
-    const { prompt, width, height } = body; // We receive prompt and target dimensions
+    let { prompt, negative_prompt, width, height } = body; 
+
+    // Enforce prompt length limit to avoid 400 errors (limit is ~2000, we truncate to 1900)
+    if (prompt && prompt.length > 1900) {
+        prompt = prompt.substring(0, 1900);
+    }
 
     const baseUrl = 'https://api-inference.modelscope.cn/';
     const commonHeaders = {
@@ -47,7 +52,9 @@ export const onRequestPost = async (context: any) => {
     const payload = {
         model: "Tongyi-MAI/Z-Image-Turbo",
         input: {
-            prompt: prompt
+            prompt: prompt,
+            // Pass negative prompt as a separate field if available
+            negative_prompt: negative_prompt || undefined
         },
         parameters: {
             width: width,
