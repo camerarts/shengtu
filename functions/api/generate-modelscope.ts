@@ -43,15 +43,16 @@ export const onRequestPost = async (context: any) => {
     };
 
     // 1. Submit Task
-    // Z-Image-Turbo typically infers size from model config or prompt, but let's try to stick to the minimal snippet provided
-    // If specific resolution parameters are supported by the specific model endpoint, they would go here.
-    // For now, we trust the model's default or the prompt context.
+    // Z-Image-Turbo supports dimensions. We inject them into 'parameters'.
     const payload = {
         model: "Tongyi-MAI/Z-Image-Turbo",
-        prompt: prompt,
-        // Optional: Some ModelScope endpoints accept parameters for size, but strict adherence to snippet first.
-        // If the model supports 'parameters', we could try:
-        // parameters: { width, height } 
+        input: {
+            prompt: prompt
+        },
+        parameters: {
+            width: width,
+            height: height
+        }
     };
 
     const submitRes = await fetch(`${baseUrl}v1/images/generations`, {
@@ -64,6 +65,7 @@ export const onRequestPost = async (context: any) => {
     });
 
     if (!submitRes.ok) {
+        // Fallback: Try top-level format if nested format fails, or return error
         const txt = await submitRes.text();
         throw new Error(`ModelScope Submit Failed: ${submitRes.status} - ${txt}`);
     }
@@ -117,8 +119,8 @@ export const onRequestPost = async (context: any) => {
     return new Response(imgBuffer, {
       headers: {
         ...corsHeaders,
-        'Content-Type': 'image/jpeg', // ModelScope usually returns JPEG or PNG, let's assume header is set by browser or we default
-        'X-Image-Width': width?.toString() || "1024", // Return requested dims as we can't easily parse binary dims here efficiently without lib
+        'Content-Type': 'image/jpeg', 
+        'X-Image-Width': width?.toString() || "1024", 
         'X-Image-Height': height?.toString() || "1024"
       }
     });

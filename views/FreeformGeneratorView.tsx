@@ -94,13 +94,23 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
     const startTime = Date.now();
 
     try {
-      const { blob, width, height } = await generateImageBlob(
+      // 1. Generate Request
+      const { blob } = await generateImageBlob(
         apiKeys, modelProvider, prompt, negativePrompt.trim() || undefined, aspectRatio, quality, null
       );
 
       const duration = (Date.now() - startTime) / 1000;
       const localUrl = URL.createObjectURL(blob);
       const historyId = Date.now().toString();
+
+      // 2. Determine ACTUAL dimensions from the generated blob
+      // This fixes the issue where ModelScope might return a square image despite requesting 16:9,
+      // causing the 16:9 container to crop the square image via object-cover.
+      const img = new Image();
+      img.src = localUrl;
+      await new Promise((resolve) => { img.onload = resolve; });
+      const realWidth = img.width;
+      const realHeight = img.height;
 
       const thumb = await createThumbnail(blob);
       const newItem: HistoryItem = {
@@ -112,13 +122,14 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
         quality,
         provider: modelProvider,
         thumbnailBase64: thumb,
-        width, height
+        width: realWidth, 
+        height: realHeight
       };
       
       onSaveHistory(newItem);
 
       setCurrentResult({
-        blob, localUrl, width, height, generationTime: duration, historyId, provider: modelProvider
+        blob, localUrl, width: realWidth, height: realHeight, generationTime: duration, historyId, provider: modelProvider
       });
 
     } catch (err: any) {
