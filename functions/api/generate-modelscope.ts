@@ -36,9 +36,13 @@ export const onRequestPost = async (context: any) => {
     const body: any = await request.json();
     let { prompt, negative_prompt, width, height } = body; 
 
-    // Enforce prompt length limit to avoid 400 errors (limit is ~2000, we truncate to 1900)
-    if (prompt && prompt.length > 1900) {
-        prompt = prompt.substring(0, 1900);
+    // Validation
+    if (!prompt) throw new Error("Prompt is required");
+
+    // Enforce prompt length limit strictly to avoid 400 errors
+    // API Limit is ~2000 chars. We truncate to 1800 to be safe with multi-byte chars or overhead.
+    if (prompt.length > 1800) {
+        prompt = prompt.substring(0, 1800);
     }
 
     const baseUrl = 'https://api-inference.modelscope.cn/';
