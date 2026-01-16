@@ -157,6 +157,11 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
   };
 
   const getAspectRatioStyle = () => {
+    // If we have a result, lock the aspect ratio to that result
+    if (currentResult) {
+        return { aspectRatio: `${currentResult.width}/${currentResult.height}` };
+    }
+    // Otherwise, use the selected aspect ratio for the placeholder
     return { aspectRatio: aspectRatio.replace(':', '/') };
   };
 
