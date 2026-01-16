@@ -17,6 +17,22 @@ function base64ToArrayBuffer(base64: string) {
   return bytes.buffer;
 }
 
+// Robustly truncate string to maxBytes utf-8
+function truncateByBytes(str: string, maxBytes: number): string {
+    const encoder = new TextEncoder();
+    if (encoder.encode(str).length <= maxBytes) return str;
+    
+    // Binary search or heuristic approach could be faster, but simple iterative slice from end is safe enough for these lengths.
+    // Start by slicing to character length = maxBytes (since min byte per char is 1) to save iterations
+    let result = str.slice(0, maxBytes);
+    
+    while (encoder.encode(result).length > maxBytes) {
+        // Remove 1 char at a time from end
+        result = result.slice(0, -1);
+    }
+    return result;
+}
+
 export const onRequestPost = async (context: any) => {
   const { request } = context;
   
@@ -39,19 +55,14 @@ export const onRequestPost = async (context: any) => {
     // Validation
     if (!prompt) throw new Error("Prompt is required");
 
-    // Enforce prompt length limit STRICTLY.
-    // The API error "prompt length more than 2000" likely refers to bytes (UTF-8) or token limit.
-    // For Chinese characters (3 bytes), 1800 chars = 5400 bytes, which fails.
-    // 600 chars * 3 = 1800 bytes < 2000.
-    // We set a conservative limit of 600 characters for the main prompt.
-    const MAX_PROMPT_CHARS = 600;
-    if (prompt.length > MAX_PROMPT_CHARS) {
-        prompt = prompt.substring(0, MAX_PROMPT_CHARS);
-    }
+    // Fix for "invalid prompt or prompt length more than 2000"
+    // The ModelScope API appears to enforce a strict byte limit (likely 2000 bytes).
+    // We allocate 1200 bytes for prompt and 600 bytes for negative prompt to stay safely under limit.
+    // (Note: Chinese chars are 3 bytes, so 1200 bytes ~= 400 Chinese chars)
+    prompt = truncateByBytes(prompt, 1200);
     
-    // Also truncate negative prompt
-    if (negative_prompt && negative_prompt.length > 300) {
-        negative_prompt = negative_prompt.substring(0, 300);
+    if (negative_prompt) {
+        negative_prompt = truncateByBytes(negative_prompt, 600);
     }
 
     const baseUrl = 'https://api-inference.modelscope.cn/';
