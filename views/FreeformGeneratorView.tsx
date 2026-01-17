@@ -209,7 +209,7 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
                     onChange={setPrompt}
                     placeholder="描述你想要的画面..."
                     multiline={true}
-                    minHeight="h-[28rem]"
+                    minHeight="h-[56rem]"
                     className="flex-shrink-0"
                 />
 
