@@ -145,8 +145,9 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
         LEFT PANEL: CONTROL STATION 
         Design: Darker, dense, vertical flow. Fixed width.
         Updated: Allows scrolling with overflow-y-auto to accommodate larger prompt area.
+        Width increased by 50% from 420px to 630px.
       */}
-      <div className="w-[420px] flex flex-col gap-5 flex-shrink-0">
+      <div className="w-[630px] flex flex-col gap-5 flex-shrink-0">
         <GlassCard noPadding className="h-full flex flex-col bg-black/40 border-white/10 overflow-y-auto custom-scrollbar">
             
             {/* 1. Header & Model Selection */}
