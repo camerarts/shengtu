@@ -188,18 +188,19 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
       {/* 
         LEFT PANEL: CONTROL STATION 
         Design: Darker, dense, vertical flow. Fixed width.
+        Updated: Allows scrolling with overflow-y-auto to accommodate larger prompt area.
       */}
       <div className="w-[420px] flex flex-col gap-5 flex-shrink-0">
-        <GlassCard noPadding className="h-full flex flex-col bg-black/40 border-white/10 overflow-hidden">
+        <GlassCard noPadding className="h-full flex flex-col bg-black/40 border-white/10 overflow-y-auto custom-scrollbar">
             
             {/* 1. Header & Model Selection */}
-            <div className="p-5 pb-0">
+            <div className="p-5 pb-0 flex-shrink-0">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-sm font-bold text-white/80 uppercase tracking-wider flex items-center gap-2">
                         <span className="w-1.5 h-4 bg-indigo-500 rounded-full"></span>
-                        Creative Console
+                        创意控制台
                     </h2>
-                    <div className="text-[10px] font-mono text-white/30">Z-TURBO ENGINE</div>
+                    <div className="text-[10px] font-mono text-white/30">Z-TURBO 引擎</div>
                 </div>
                 
                 {/* Model Badge */}
@@ -217,11 +218,11 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
                 </div>
             </div>
 
-            {/* 2. Main Input Area (Auto Expand) */}
-            <div className="flex-1 px-5 py-2 flex flex-col min-h-0">
+            {/* 2. Main Input Area (Auto Expand with significant min-height) */}
+            <div className="flex-1 px-5 py-2 flex flex-col min-h-[500px]">
                 <label className="text-[11px] font-medium text-white/40 mb-2 flex justify-between uppercase tracking-wider">
-                    <span>Prompt</span>
-                    <span className="text-white/20">{prompt.length} chars</span>
+                    <span>提示词 (Prompt)</span>
+                    <span className="text-white/20">{prompt.length} 字符</span>
                 </label>
                 <div className="flex-1 relative group">
                     <textarea 
@@ -234,7 +235,7 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
                          <button 
                             onClick={() => navigator.clipboard.writeText(prompt)}
                             className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/30 hover:text-white transition-colors"
-                            title="Copy"
+                            title="复制"
                          >
                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
                          </button>
@@ -242,12 +243,12 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
                 </div>
             </div>
 
-            {/* 3. Settings Area (Bottom Fixed) */}
-            <div className="p-5 pt-2 bg-black/20 border-t border-white/5 space-y-5">
+            {/* 3. Settings Area (Bottom) */}
+            <div className="p-5 pt-2 bg-black/20 border-t border-white/5 space-y-5 flex-shrink-0">
                 
                 {/* Negative Prompt (Collapsible-ish feel) */}
                 <div>
-                     <label className="text-[10px] font-bold text-white/30 mb-1.5 uppercase tracking-wider">Negative Prompt</label>
+                     <label className="text-[10px] font-bold text-white/30 mb-1.5 uppercase tracking-wider">负向提示词 (Negative)</label>
                      <input 
                         type="text" 
                         value={negativePrompt}
@@ -260,7 +261,7 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
                 {/* Aspect Ratio Grid */}
                 <div>
                      <div className="flex justify-between items-end mb-2">
-                        <label className="text-[10px] font-bold text-white/30 uppercase tracking-wider">Aspect Ratio</label>
+                        <label className="text-[10px] font-bold text-white/30 uppercase tracking-wider">画面比例 (Ratio)</label>
                         <span className="text-[10px] font-mono text-indigo-300">{getDims(aspectRatio).width}x{getDims(aspectRatio).height}</span>
                      </div>
                      <VisualRatioSelector selected={aspectRatio} onSelect={setAspectRatio} />
@@ -291,7 +292,7 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
                         isLoading={loading} 
                         className="flex-1 py-3.5 text-sm font-semibold tracking-wide shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_30px_rgba(79,70,229,0.5)] border-indigo-500/30"
                      >
-                        {loading ? 'GENERATING...' : 'GENERATE ART'}
+                        {loading ? '生成中...' : '立即生成'}
                      </Button>
                 </div>
             </div>
@@ -308,10 +309,10 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
             {/* Top Bar */}
             <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-start z-10 pointer-events-none">
                 <div className="flex flex-col">
-                   <span className="text-xs font-bold text-white/20 tracking-[0.2em] uppercase">Viewport</span>
+                   <span className="text-xs font-bold text-white/20 tracking-[0.2em] uppercase">预览视口 (Viewport)</span>
                    {currentResult && (
                       <span className="text-[10px] font-mono text-white/40 mt-1 animate-pulse-slow">
-                        RENDER_ID: {currentResult.historyId?.slice(-6)}
+                        渲染 ID: {currentResult.historyId?.slice(-6)}
                       </span>
                    )}
                 </div>
@@ -333,7 +334,7 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
                         <div className="w-20 h-20 rounded-full border-2 border-white/5 border-t-indigo-500 animate-spin"></div>
                         <div className="w-16 h-16 rounded-full border-2 border-white/5 border-b-purple-500 animate-spin absolute top-2 left-2 reverse-spin"></div>
                      </div>
-                     <p className="mt-6 text-white/60 text-xs font-mono tracking-widest animate-pulse">PROCESSING DATA STREAM...</p>
+                     <p className="mt-6 text-white/60 text-xs font-mono tracking-widest animate-pulse">正在处理数据流...</p>
                    </div>
                 )}
 
@@ -342,7 +343,7 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
                         <div className="w-24 h-24 rounded-2xl border-2 border-dashed border-white/20 flex items-center justify-center mb-6 rotate-3">
                             <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
                         </div>
-                        <p className="text-sm font-medium tracking-wide">READY TO CREATE</p>
+                        <p className="text-sm font-medium tracking-wide">准备就绪</p>
                     </div>
                 ) : (
                     <div className="relative group max-w-full max-h-full shadow-2xl transition-transform duration-500">
@@ -364,26 +365,26 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
                             
                             {/* Info Chip */}
                             <div className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 flex flex-col items-start mr-1">
-                                <span className="text-[10px] text-white/40 font-bold uppercase">Specs</span>
+                                <span className="text-[10px] text-white/40 font-bold uppercase">参数</span>
                                 <span className="text-[10px] text-white/90 font-mono">{currentResult.width}x{currentResult.height} • {formatBytes(currentResult.blob.size)}</span>
                             </div>
 
                             {/* Actions */}
                             {!currentResult.cloudUrl ? (
-                                <button onClick={handleUpload} disabled={uploading} className="p-2.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 hover:text-white transition-all border border-transparent hover:border-indigo-500/30" title="Upload to Cloud">
+                                <button onClick={handleUpload} disabled={uploading} className="p-2.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 hover:text-white transition-all border border-transparent hover:border-indigo-500/30" title="上传云端">
                                     <svg className={`w-4 h-4 ${uploading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
                                 </button>
                             ) : (
-                                <div className="p-2.5 rounded-xl bg-green-500/10 text-green-400 border border-green-500/20" title="Synced">
+                                <div className="p-2.5 rounded-xl bg-green-500/10 text-green-400 border border-green-500/20" title="已同步">
                                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                                 </div>
                             )}
 
-                            <button onClick={handleDownload} className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-all border border-transparent hover:border-white/10" title="Download">
+                            <button onClick={handleDownload} className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-all border border-transparent hover:border-white/10" title="下载">
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                             </button>
                             
-                            <a href={currentResult.cloudUrl || currentResult.localUrl} target="_blank" rel="noreferrer" className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-all border border-transparent hover:border-white/10" title="Open Fullscreen">
+                            <a href={currentResult.cloudUrl || currentResult.localUrl} target="_blank" rel="noreferrer" className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-all border border-transparent hover:border-white/10" title="全屏查看">
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                             </a>
                         </div>
@@ -394,11 +395,11 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
             {/* Footer Status */}
             <div className="h-8 border-t border-white/5 bg-black/20 flex items-center justify-between px-4 text-[10px] text-white/20 select-none">
                 <div className="flex gap-4">
-                    <span>SYSTEM_STATUS: ONLINE</span>
-                    {currentResult && <span>LATENCY: {currentResult.generationTime.toFixed(2)}s</span>}
+                    <span>系统状态: 在线</span>
+                    {currentResult && <span>耗时: {currentResult.generationTime.toFixed(2)}s</span>}
                 </div>
                 <div>
-                     MODEL_PROVIDER: <span className="text-indigo-400/50">MODELSCOPE_API</span>
+                     模型服务: <span className="text-indigo-400/50">MODELSCOPE_API</span>
                 </div>
             </div>
         </GlassCard>

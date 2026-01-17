@@ -33,7 +33,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSettingsClick }) => {
   return (
     <div className="w-20 lg:w-32 flex-none flex flex-col bg-black/20 border-r border-white/10 backdrop-blur-xl h-full pt-6">
       <div className="px-4 mb-6 hidden lg:block">
-        <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider">Menu</h2>
+        <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider">功能导航</h2>
       </div>
       
       <div className="flex-1 flex flex-col gap-2 px-3">
