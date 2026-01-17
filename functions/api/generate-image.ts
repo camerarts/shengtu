@@ -9,12 +9,15 @@ interface Env {
 
 function getDimensions(aspectRatio: string, quality: string): { width: number; height: number } {
   // Simple mapping for headers (frontend knows the logic too)
+  // Updated to use multiples of 64
   const map: Record<string, Record<string, { w: number; h: number }>> = {
     "1:1": { "1K": { w: 1024, h: 1024 }, "2K": { w: 2048, h: 2048 }, "4K": { w: 4096, h: 4096 } },
     "3:4": { "1K": { w: 768, h: 1024 }, "2K": { w: 1536, h: 2048 }, "4K": { w: 3072, h: 4096 } },
     "4:3": { "1K": { w: 1024, h: 768 }, "2K": { w: 2048, h: 1536 }, "4K": { w: 4096, h: 3072 } },
-    "9:16": { "1K": { w: 576, h: 1024 }, "2K": { w: 1152, h: 2048 }, "4K": { w: 2304, h: 4096 } },
-    "16:9": { "1K": { w: 1024, h: 576 }, "2K": { w: 2048, h: 1152 }, "4K": { w: 4096, h: 2304 } }
+    // 9:16 -> 768x1344
+    "9:16": { "1K": { w: 768, h: 1344 }, "2K": { w: 1536, h: 2688 }, "4K": { w: 3072, h: 5376 } },
+    // 16:9 -> 1344x768
+    "16:9": { "1K": { w: 1344, h: 768 }, "2K": { w: 2688, h: 1536 }, "4K": { w: 5376, h: 3072 } }
   };
   const d = map[aspectRatio]?.[quality] || map["1:1"]["1K"];
   return { width: d.w, height: d.h };

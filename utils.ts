@@ -2,13 +2,15 @@ import { AspectRatio, ImageQuality, ModelProvider } from './types';
 
 export function getDimensions(aspectRatio: AspectRatio | string, quality: ImageQuality): { width: number; height: number } {
   // Used for UI display logic
+  // Dimensions updated to be multiples of 64 for better Model compatibility (SDXL/Turbo etc)
   const map: Record<string, Record<string, { w: number; h: number }>> = {
     "1:1": { "1K": { w: 1024, h: 1024 }, "2K": { w: 2048, h: 2048 }, "4K": { w: 4096, h: 4096 } },
     "3:4": { "1K": { w: 768, h: 1024 }, "2K": { w: 1536, h: 2048 }, "4K": { w: 3072, h: 4096 } },
     "4:3": { "1K": { w: 1024, h: 768 }, "2K": { w: 2048, h: 1536 }, "4K": { w: 4096, h: 3072 } },
-    // Updated to standard HD (720p based) for better compatibility
-    "9:16": { "1K": { w: 720, h: 1280 }, "2K": { w: 1440, h: 2560 }, "4K": { w: 2160, h: 3840 } },
-    "16:9": { "1K": { w: 1280, h: 720 }, "2K": { w: 2560, h: 1440 }, "4K": { w: 3840, h: 2160 } }
+    // 9:16 -> 768x1344 (closest safe bucket to 720p, multiple of 64)
+    "9:16": { "1K": { w: 768, h: 1344 }, "2K": { w: 1536, h: 2688 }, "4K": { w: 3072, h: 5376 } },
+    // 16:9 -> 1344x768
+    "16:9": { "1K": { w: 1344, h: 768 }, "2K": { w: 2688, h: 1536 }, "4K": { w: 5376, h: 3072 } }
   };
   const d = map[aspectRatio]?.[quality] || map["1:1"]["1K"];
   return { width: d.w, height: d.h };
