@@ -28,7 +28,6 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
     return MODELSCOPE_SUPPORTED_QUALITIES.includes(saved) ? saved : ImageQuality.Q_1K;
   });
   
-  // Force ModelScope for this view as requested previously, but conceptually adaptable
   const [modelProvider] = useState<ModelProvider>(ModelProvider.MODELSCOPE);
   
   const [loading, setLoading] = useState(false);
@@ -137,135 +136,126 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
 
   const getDims = (r: AspectRatio) => getDimensions(r, quality);
 
+  // Common styles for unified tone
+  const inputBaseStyle = "bg-white/5 border border-white/10 rounded-xl px-3 text-xs text-white/90 focus:outline-none focus:border-indigo-500/30 transition-all";
+
   // --- Render ---
   return (
     <div className="flex h-full gap-5">
       
       {/* 
         LEFT PANEL: CONTROL STATION 
-        Design: Darker, dense, vertical flow. Fixed width.
-        Updated: Allows scrolling with overflow-y-auto to accommodate larger prompt area.
-        Width increased by 50% from 420px to 630px.
+        Width: 600px (Increased ~50% from base)
+        Style: Unified dark glass tone
       */}
-      <div className="w-[630px] flex flex-col gap-5 flex-shrink-0">
-        <GlassCard noPadding className="h-full flex flex-col bg-black/40 border-white/10 overflow-y-auto custom-scrollbar">
+      <div className="w-[600px] flex flex-col gap-5 flex-shrink-0">
+        <GlassCard noPadding className="h-full flex flex-col bg-black/40 border-white/10 overflow-hidden">
             
-            {/* 1. Header & Model Selection */}
-            <div className="p-5 pb-0 flex-shrink-0">
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-sm font-bold text-white/80 uppercase tracking-wider flex items-center gap-2">
-                        <span className="w-1.5 h-4 bg-indigo-500 rounded-full"></span>
-                        创意控制台
-                    </h2>
-                    <div className="text-[10px] font-mono text-white/30">Z-TURBO 引擎</div>
-                </div>
+            {/* 1. Header & Scrollable Content Container */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
                 
-                {/* Model Badge */}
-                <div className="w-full bg-gradient-to-r from-purple-900/30 to-indigo-900/30 border border-purple-500/20 p-3 rounded-xl flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-300">
-                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                        </div>
-                        <div>
-                            <div className="text-xs font-bold text-white/90 tracking-wide">Z-Image-Turbo</div>
-                            <div className="text-[10px] text-white/40">ModelScope Cloud</div>
-                        </div>
-                    </div>
-                    <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse"></div>
-                </div>
-            </div>
-
-            {/* 2. Main Input Area (Auto Expand with significant min-height) */}
-            <div className="flex-1 px-5 py-2 flex flex-col min-h-[900px]">
-                <label className="text-[11px] font-medium text-white/40 mb-2 flex justify-between uppercase tracking-wider">
-                    <span>提示词 (Prompt)</span>
-                    <span className="text-white/20">{prompt.length} 字符</span>
-                </label>
-                <div className="flex-1 relative group">
-                    <textarea 
-                        value={prompt}
-                        onChange={(e) => setPrompt(e.target.value)}
-                        placeholder="在此输入您的创意灵感..."
-                        className="w-full h-full bg-black/30 hover:bg-black/40 focus:bg-black/50 border border-white/10 focus:border-indigo-500/50 rounded-xl p-4 text-sm leading-relaxed text-white/90 placeholder-white/20 resize-none transition-all focus:outline-none custom-scrollbar"
-                    />
-                    <div className="absolute bottom-3 right-3 flex gap-2">
-                         <button 
-                            onClick={() => navigator.clipboard.writeText(prompt)}
-                            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/30 hover:text-white transition-colors"
-                            title="复制"
-                         >
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                         </button>
+                {/* Header Section */}
+                <div className="p-5 pb-0 flex-shrink-0">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-sm font-bold text-white/80 uppercase tracking-wider flex items-center gap-2">
+                            <span className="w-1.5 h-4 bg-indigo-500 rounded-full"></span>
+                            创意控制台
+                        </h2>
+                        <div className="text-[10px] font-mono text-white/30">Z-TURBO</div>
                     </div>
                 </div>
-            </div>
 
-            {/* 3. Settings Area (Bottom) */}
-            <div className="p-5 pt-2 bg-black/20 border-t border-white/5 space-y-5 flex-shrink-0">
-                
-                {/* Negative Prompt (Collapsible-ish feel) */}
-                <div>
-                     <label className="text-[10px] font-bold text-white/30 mb-1.5 uppercase tracking-wider">负向提示词 (Negative)</label>
-                     <input 
-                        type="text" 
-                        value={negativePrompt}
-                        onChange={(e) => setNegativePrompt(e.target.value)}
-                        placeholder="不想出现的元素 (模糊, 变形...)"
-                        className="w-full bg-black/30 border border-white/5 focus:border-white/20 rounded-lg px-3 py-2 text-xs text-white/80 placeholder-white/20 focus:outline-none transition-all"
-                     />
-                </div>
-
-                {/* Aspect Ratio Select (Dropdown) */}
-                <div>
-                     <div className="flex justify-between items-end mb-2">
-                        <label className="text-[10px] font-bold text-white/30 uppercase tracking-wider">画面比例 (Ratio)</label>
-                        <span className="text-[10px] font-mono text-indigo-300">{getDims(aspectRatio).width}x{getDims(aspectRatio).height}</span>
-                     </div>
-                     <div className="relative">
-                        <select 
-                            value={aspectRatio}
-                            onChange={(e) => setAspectRatio(e.target.value as AspectRatio)}
-                            className="w-full appearance-none bg-black/40 border border-white/10 hover:border-white/20 rounded-xl px-3 py-2.5 text-xs font-medium text-white/80 focus:outline-none focus:ring-1 focus:ring-indigo-500/30 transition-all cursor-pointer"
-                        >
-                            {ASPECT_RATIOS.map(r => (
-                                <option key={r} value={r} className="bg-[#1a1a20] text-white py-1">
-                                    {RATIO_LABELS[r]}
-                                </option>
-                            ))}
-                        </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-white/30">
-                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                {/* Main Input Area - Massive Height */}
+                <div className="flex-1 px-5 py-4 flex flex-col min-h-[600px]">
+                    <div className="flex justify-between items-center mb-2">
+                        <label className="text-[11px] font-medium text-white/40 uppercase tracking-wider">提示词 (Prompt)</label>
+                        <span className="text-[10px] font-mono text-white/20">{prompt.length} chars</span>
+                    </div>
+                    <div className="flex-1 relative group">
+                        <textarea 
+                            value={prompt}
+                            onChange={(e) => setPrompt(e.target.value)}
+                            placeholder="描述画面细节、光影、风格..."
+                            className={`w-full h-full p-4 text-sm leading-relaxed resize-none custom-scrollbar placeholder-white/20 ${inputBaseStyle} bg-white/5 focus:bg-white/10`}
+                        />
+                        <div className="absolute bottom-3 right-3">
+                             <button 
+                                onClick={() => navigator.clipboard.writeText(prompt)}
+                                className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/30 hover:text-white transition-colors"
+                             >
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                             </button>
                         </div>
-                     </div>
+                    </div>
                 </div>
 
-                {/* Quality & Action Row */}
-                <div className="flex gap-3 items-stretch">
-                     {/* Quality Selector */}
-                     <div className="w-1/3">
-                        <div className="relative h-full">
+                {/* Settings Section */}
+                <div className="p-5 pt-0 space-y-5 pb-8">
+                    
+                    {/* Negative Prompt */}
+                    <div>
+                        <label className="text-[10px] font-bold text-white/30 mb-1.5 block uppercase tracking-wider">负向提示词 (Negative)</label>
+                        <input 
+                            type="text" 
+                            value={negativePrompt}
+                            onChange={(e) => setNegativePrompt(e.target.value)}
+                            placeholder="低质量, 错误, 模糊..."
+                            className={`w-full py-2.5 ${inputBaseStyle}`}
+                        />
+                    </div>
+
+                    {/* Aspect Ratio - Single Line Minimalist */}
+                    <div>
+                         <div className="flex justify-between items-end mb-2">
+                            <label className="text-[10px] font-bold text-white/30 uppercase tracking-wider">画面比例 (Ratio)</label>
+                            <span className="text-[10px] font-mono text-indigo-300">{getDims(aspectRatio).width}x{getDims(aspectRatio).height}</span>
+                         </div>
+                         <div className="flex items-center gap-2">
+                            {ASPECT_RATIOS.map(r => {
+                                const active = aspectRatio === r;
+                                return (
+                                    <button
+                                        key={r}
+                                        onClick={() => setAspectRatio(r)}
+                                        className={`flex-1 py-2 rounded-lg text-[10px] font-medium transition-all border ${
+                                            active 
+                                            ? 'bg-indigo-500/20 border-indigo-500/30 text-indigo-200' 
+                                            : 'bg-white/5 border-transparent hover:bg-white/10 text-white/40 hover:text-white/70'
+                                        }`}
+                                    >
+                                        {r}
+                                    </button>
+                                );
+                            })}
+                         </div>
+                    </div>
+
+                    {/* Quality & Action Row */}
+                    <div className="flex gap-3 h-11">
+                         {/* Quality Selector */}
+                         <div className="w-1/3 relative">
                             <select 
                                 value={quality}
                                 onChange={(e) => setQuality(e.target.value as ImageQuality)}
-                                className="w-full h-full appearance-none bg-black/40 border border-white/10 hover:border-white/20 rounded-xl px-3 text-xs font-medium text-white/80 focus:outline-none focus:ring-1 focus:ring-indigo-500/30 transition-all cursor-pointer"
+                                className={`w-full h-full appearance-none cursor-pointer ${inputBaseStyle}`}
                             >
-                                {MODELSCOPE_SUPPORTED_QUALITIES.map(q => <option key={q} value={q} className="bg-[#1a1a20] text-white py-1">{q}</option>)}
+                                {MODELSCOPE_SUPPORTED_QUALITIES.map(q => <option key={q} value={q} className="bg-[#1a1a20]">{q}</option>)}
                             </select>
-                            <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-white/30">
+                            <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-white/30">
                                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                             </div>
-                        </div>
-                     </div>
+                         </div>
 
-                     {/* Generate Button */}
-                     <Button 
-                        onClick={handleGenerate} 
-                        disabled={loading || !prompt} 
-                        isLoading={loading} 
-                        className="flex-1 py-3.5 text-sm font-semibold tracking-wide shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_30px_rgba(79,70,229,0.5)] border-indigo-500/30"
-                     >
-                        {loading ? '生成中...' : '立即生成'}
-                     </Button>
+                         {/* Generate Button */}
+                         <Button 
+                            onClick={handleGenerate} 
+                            disabled={loading || !prompt} 
+                            isLoading={loading} 
+                            className="flex-1 h-full text-sm font-semibold tracking-wide border-indigo-500/30 shadow-none hover:shadow-[0_0_20px_rgba(99,102,241,0.3)] bg-gradient-to-r from-indigo-600 to-indigo-700"
+                         >
+                            {loading ? '生成中...' : '立即生成'}
+                         </Button>
+                    </div>
                 </div>
             </div>
         </GlassCard>
@@ -273,20 +263,15 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
 
       {/* 
         RIGHT PANEL: IMMERSIVE VIEWPORT 
-        Design: Minimal, focuses on the image. Floating tools.
+        Style: Minimal, pure preview
       */}
       <div className="flex-1 h-full min-w-0">
-        <GlassCard noPadding className="h-full flex flex-col relative overflow-hidden bg-[#0a0a0c]/60 border-white/5">
+        <GlassCard noPadding className="h-full flex flex-col relative bg-[#0a0a0c]/80 border-white/5 overflow-hidden">
             
-            {/* Top Bar */}
-            <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-start z-10 pointer-events-none">
+            {/* Top Info Overlay */}
+            <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-start z-10 pointer-events-none">
                 <div className="flex flex-col">
-                   <span className="text-xs font-bold text-white/20 tracking-[0.2em] uppercase">预览视口 (Viewport)</span>
-                   {currentResult && (
-                      <span className="text-[10px] font-mono text-white/40 mt-1 animate-pulse-slow">
-                        渲染 ID: {currentResult.historyId?.slice(-6)}
-                      </span>
-                   )}
+                   <span className="text-[10px] font-bold text-white/20 tracking-[0.2em] uppercase">VIEWPORT</span>
                 </div>
                 {error && (
                     <div className="pointer-events-auto bg-red-500/10 border border-red-500/20 text-red-200 px-4 py-2 rounded-lg backdrop-blur-md text-xs font-medium shadow-lg animate-in fade-in slide-in-from-top-2">
@@ -295,84 +280,51 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
                 )}
             </div>
 
-            {/* Canvas Area */}
-            <div className="flex-1 relative flex items-center justify-center p-8">
-                {/* Background Grid Pattern */}
-                <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
+            {/* Canvas Area - Fixed sizing logic */}
+            <div className="absolute inset-0 flex items-center justify-center p-6 sm:p-10">
+                {/* Grid Background */}
+                <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '32px 32px' }}></div>
 
                 {loading && (
-                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/20 backdrop-blur-sm z-30">
-                     <div className="relative">
-                        <div className="w-20 h-20 rounded-full border-2 border-white/5 border-t-indigo-500 animate-spin"></div>
-                        <div className="w-16 h-16 rounded-full border-2 border-white/5 border-b-purple-500 animate-spin absolute top-2 left-2 reverse-spin"></div>
-                     </div>
-                     <p className="mt-6 text-white/60 text-xs font-mono tracking-widest animate-pulse">正在处理数据流...</p>
+                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm z-30">
+                     <div className="w-12 h-12 border-2 border-white/10 border-t-indigo-500 rounded-full animate-spin"></div>
                    </div>
                 )}
 
                 {!currentResult ? (
-                    <div className="flex flex-col items-center justify-center text-center opacity-30 select-none">
-                        <div className="w-24 h-24 rounded-2xl border-2 border-dashed border-white/20 flex items-center justify-center mb-6 rotate-3">
-                            <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                    <div className="flex flex-col items-center justify-center text-center opacity-20 select-none">
+                        <div className="w-20 h-20 rounded-2xl border border-white/20 flex items-center justify-center mb-4">
+                            <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                         </div>
-                        <p className="text-sm font-medium tracking-wide">准备就绪</p>
+                        <p className="text-xs font-mono tracking-widest">READY</p>
                     </div>
                 ) : (
-                    <div className="relative group max-w-full max-h-full shadow-2xl transition-transform duration-500">
-                        {/* Image Frame */}
-                        <div className="relative rounded-lg overflow-hidden border border-white/10 bg-black">
-                            <img 
-                                src={currentResult.cloudUrl || currentResult.localUrl} 
-                                alt="Result" 
-                                className="max-w-full max-h-[calc(100vh-140px)] w-auto h-auto object-contain"
-                                style={{ aspectRatio: `${currentResult.width}/${currentResult.height}` }}
-                            />
-                            
-                            {/* Hover Overlay Gradient */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-                        </div>
-
-                        {/* Floating Action Bar (Bottom Center) */}
-                        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 p-1.5 bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all duration-300 z-20">
-                            
-                            {/* Info Chip */}
-                            <div className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 flex flex-col items-start mr-1">
-                                <span className="text-[10px] text-white/40 font-bold uppercase">参数</span>
-                                <span className="text-[10px] text-white/90 font-mono">{currentResult.width}x{currentResult.height} • {formatBytes(currentResult.blob.size)}</span>
-                            </div>
-
-                            {/* Actions */}
+                    <div className="relative w-full h-full flex items-center justify-center group">
+                        {/* Image Frame - Ensure it fits within parent */}
+                        <img 
+                            src={currentResult.cloudUrl || currentResult.localUrl} 
+                            alt="Result" 
+                            className="max-w-full max-h-full object-contain shadow-2xl drop-shadow-2xl"
+                        />
+                        
+                        {/* Hover Overlay Actions */}
+                        <div className="absolute bottom-4 flex items-center gap-2 p-1.5 bg-black/60 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300">
                             {!currentResult.cloudUrl ? (
-                                <button onClick={handleUpload} disabled={uploading} className="p-2.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 hover:text-white transition-all border border-transparent hover:border-indigo-500/30" title="上传云端">
+                                <button onClick={handleUpload} disabled={uploading} className="p-2 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 hover:text-white transition-all" title="上传">
                                     <svg className={`w-4 h-4 ${uploading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
                                 </button>
                             ) : (
-                                <div className="p-2.5 rounded-xl bg-green-500/10 text-green-400 border border-green-500/20" title="已同步">
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                                </div>
+                                <div className="p-2 text-green-400"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg></div>
                             )}
-
-                            <button onClick={handleDownload} className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-all border border-transparent hover:border-white/10" title="下载">
+                            <button onClick={handleDownload} className="p-2 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all" title="下载">
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                             </button>
-                            
-                            <a href={currentResult.cloudUrl || currentResult.localUrl} target="_blank" rel="noreferrer" className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-all border border-transparent hover:border-white/10" title="全屏查看">
+                            <a href={currentResult.cloudUrl || currentResult.localUrl} target="_blank" rel="noreferrer" className="p-2 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all">
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                             </a>
                         </div>
                     </div>
                 )}
-            </div>
-
-            {/* Footer Status */}
-            <div className="h-8 border-t border-white/5 bg-black/20 flex items-center justify-between px-4 text-[10px] text-white/20 select-none">
-                <div className="flex gap-4">
-                    <span>系统状态: 在线</span>
-                    {currentResult && <span>耗时: {currentResult.generationTime.toFixed(2)}s</span>}
-                </div>
-                <div>
-                     模型服务: <span className="text-indigo-400/50">MODELSCOPE_API</span>
-                </div>
             </div>
         </GlassCard>
       </div>
