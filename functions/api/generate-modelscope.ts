@@ -56,9 +56,8 @@ export const onRequestPost = async (context: any) => {
     if (!prompt) throw new Error("Prompt is required");
 
     // Fix for "invalid prompt or prompt length more than 2000"
-    // The ModelScope API appears to enforce a strict byte limit (likely 2000 bytes).
+    // The ModelScope API enforces a strict byte limit.
     // We allocate 1200 bytes for prompt and 600 bytes for negative prompt to stay safely under limit.
-    // (Note: Chinese chars are 3 bytes, so 1200 bytes ~= 400 Chinese chars)
     prompt = truncateByBytes(prompt, 1200);
     
     if (negative_prompt) {
@@ -72,14 +71,11 @@ export const onRequestPost = async (context: any) => {
     };
 
     // 1. Submit Task
-    // Z-Image-Turbo supports dimensions. We inject them into 'parameters'.
+    // Structure updated to match official Python SDK: Prompt at ROOT, not inside 'input'
     const payload = {
         model: "Tongyi-MAI/Z-Image-Turbo",
-        input: {
-            prompt: prompt,
-            // Pass negative prompt as a separate field if available
-            negative_prompt: negative_prompt || undefined
-        },
+        prompt: prompt,
+        negative_prompt: negative_prompt || undefined,
         parameters: {
             width: width,
             height: height
