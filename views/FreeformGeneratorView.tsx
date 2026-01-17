@@ -5,50 +5,6 @@ import { AspectRatio, ImageQuality, HistoryItem, ModelProvider } from '../types'
 import { ASPECT_RATIOS, RATIO_LABELS } from '../constants';
 import { generateImageBlob, uploadImageBlob, createThumbnail, formatBytes, getDimensions } from '../utils';
 
-// --- Icons & Visual Components ---
-
-const VisualRatioSelector = ({ 
-  selected, 
-  onSelect, 
-  disabled 
-}: { 
-  selected: AspectRatio; 
-  onSelect: (r: AspectRatio) => void; 
-  disabled?: boolean 
-}) => {
-  return (
-    <div className="grid grid-cols-5 gap-2">
-      {ASPECT_RATIOS.map((ratio) => {
-        const [w, h] = ratio.split(':').map(Number);
-        // Calculate a visual box that fits in a 24x24 pixel area preserving aspect ratio
-        const scale = 20 / Math.max(w, h);
-        const width = w * scale;
-        const height = h * scale;
-
-        return (
-          <button
-            key={ratio}
-            onClick={() => onSelect(ratio)}
-            disabled={disabled}
-            className={`
-              group relative flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-xl border transition-all duration-300
-              ${selected === ratio 
-                ? 'bg-indigo-500/20 border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.15)]' 
-                : 'bg-black/20 border-white/5 hover:bg-white/5 hover:border-white/10'}
-            `}
-            title={RATIO_LABELS[ratio]}
-          >
-            <div className={`border rounded-[1px] transition-colors ${selected === ratio ? 'border-indigo-300' : 'border-white/40 group-hover:border-white/60'}`} style={{ width: `${width}px`, height: `${height}px` }} />
-            <span className={`text-[9px] font-mono tracking-tighter ${selected === ratio ? 'text-indigo-200' : 'text-white/30 group-hover:text-white/50'}`}>
-              {ratio}
-            </span>
-          </button>
-        );
-      })}
-    </div>
-  );
-};
-
 interface FreeformGeneratorViewProps {
   apiKeys: { gemini: string; modelscope: string };
   history: HistoryItem[];
@@ -219,7 +175,7 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
             </div>
 
             {/* 2. Main Input Area (Auto Expand with significant min-height) */}
-            <div className="flex-1 px-5 py-2 flex flex-col min-h-[500px]">
+            <div className="flex-1 px-5 py-2 flex flex-col min-h-[900px]">
                 <label className="text-[11px] font-medium text-white/40 mb-2 flex justify-between uppercase tracking-wider">
                     <span>提示词 (Prompt)</span>
                     <span className="text-white/20">{prompt.length} 字符</span>
@@ -258,13 +214,28 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
                      />
                 </div>
 
-                {/* Aspect Ratio Grid */}
+                {/* Aspect Ratio Select (Dropdown) */}
                 <div>
                      <div className="flex justify-between items-end mb-2">
                         <label className="text-[10px] font-bold text-white/30 uppercase tracking-wider">画面比例 (Ratio)</label>
                         <span className="text-[10px] font-mono text-indigo-300">{getDims(aspectRatio).width}x{getDims(aspectRatio).height}</span>
                      </div>
-                     <VisualRatioSelector selected={aspectRatio} onSelect={setAspectRatio} />
+                     <div className="relative">
+                        <select 
+                            value={aspectRatio}
+                            onChange={(e) => setAspectRatio(e.target.value as AspectRatio)}
+                            className="w-full appearance-none bg-black/40 border border-white/10 hover:border-white/20 rounded-xl px-3 py-2.5 text-xs font-medium text-white/80 focus:outline-none focus:ring-1 focus:ring-indigo-500/30 transition-all cursor-pointer"
+                        >
+                            {ASPECT_RATIOS.map(r => (
+                                <option key={r} value={r} className="bg-[#1a1a20] text-white py-1">
+                                    {RATIO_LABELS[r]}
+                                </option>
+                            ))}
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-white/30">
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                        </div>
+                     </div>
                 </div>
 
                 {/* Quality & Action Row */}
@@ -277,7 +248,7 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
                                 onChange={(e) => setQuality(e.target.value as ImageQuality)}
                                 className="w-full h-full appearance-none bg-black/40 border border-white/10 hover:border-white/20 rounded-xl px-3 text-xs font-medium text-white/80 focus:outline-none focus:ring-1 focus:ring-indigo-500/30 transition-all cursor-pointer"
                             >
-                                {MODELSCOPE_SUPPORTED_QUALITIES.map(q => <option key={q} value={q}>{q}</option>)}
+                                {MODELSCOPE_SUPPORTED_QUALITIES.map(q => <option key={q} value={q} className="bg-[#1a1a20] text-white py-1">{q}</option>)}
                             </select>
                             <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-white/30">
                                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
