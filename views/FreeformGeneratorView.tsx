@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { GlassCard } from '../components/GlassCard';
 import { Button } from '../components/Button';
 import { AspectRatio, ImageQuality, HistoryItem, ModelProvider } from '../types';
-import { ASPECT_RATIOS, RATIO_LABELS } from '../constants';
-import { generateImageBlob, uploadImageBlob, createThumbnail, formatBytes, getDimensions } from '../utils';
+import { ASPECT_RATIOS } from '../constants';
+import { generateImageBlob, uploadImageBlob, createThumbnail, getDimensions } from '../utils';
 
 interface FreeformGeneratorViewProps {
   apiKeys: { gemini: string; modelscope: string };
