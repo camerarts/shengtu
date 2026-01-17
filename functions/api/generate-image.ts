@@ -7,16 +7,13 @@ interface Env {
   GEMINI_API_KEY: string;
 }
 
-function getDimensions(aspectRatio: string, quality: string): { width: number; height: number } {
-  // Simple mapping for headers (frontend knows the logic too)
-  // Updated to use multiples of 64
-  const map: Record<string, Record<string, { w: number; h: number }>> = {
+function getDimensions(aspectRatio: string, quality: string) {
+  // Updated to use multiples of 64 for better Model compatibility
+  const map: any = {
     "1:1": { "1K": { w: 1024, h: 1024 }, "2K": { w: 2048, h: 2048 }, "4K": { w: 4096, h: 4096 } },
     "3:4": { "1K": { w: 768, h: 1024 }, "2K": { w: 1536, h: 2048 }, "4K": { w: 3072, h: 4096 } },
     "4:3": { "1K": { w: 1024, h: 768 }, "2K": { w: 2048, h: 1536 }, "4K": { w: 4096, h: 3072 } },
-    // 9:16 -> 768x1344
     "9:16": { "1K": { w: 768, h: 1344 }, "2K": { w: 1536, h: 2688 }, "4K": { w: 3072, h: 5376 } },
-    // 16:9 -> 1344x768
     "16:9": { "1K": { w: 1344, h: 768 }, "2K": { w: 2688, h: 1536 }, "4K": { w: 5376, h: 3072 } }
   };
   const d = map[aspectRatio]?.[quality] || map["1:1"]["1K"];
@@ -25,8 +22,9 @@ function getDimensions(aspectRatio: string, quality: string): { width: number; h
 
 function base64ToArrayBuffer(base64: string) {
   const binaryString = atob(base64);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
     bytes[i] = binaryString.charCodeAt(i);
   }
   return bytes.buffer;
@@ -39,7 +37,7 @@ export const onRequestPost = async (context: any) => {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, x-goog-api-key',
-    'Access-Control-Expose-Headers': 'X-Image-Width, X-Image-Height', // Expose headers for frontend to read dims
+    'Access-Control-Expose-Headers': 'X-Image-Width, X-Image-Height',
   };
 
   if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -58,8 +56,11 @@ export const onRequestPost = async (context: any) => {
     
     const parts: any[] = [{ text: finalPrompt }];
     if (referenceImageBase64) {
+        // Strip data prefix if present to get just base64, but Gemini API expects specific format structure.
         const match = referenceImageBase64.match(/^data:(image\/[a-zA-Z]+);base64,(.+)$/);
-        if (match) parts.push({ inlineData: { mimeType: match[1], data: match[2] } });
+        if (match) {
+            parts.push({ inlineData: { mimeType: match[1], data: match[2] } });
+        }
     }
 
     const payload = {
@@ -96,8 +97,6 @@ export const onRequestPost = async (context: any) => {
     // Convert to Binary immediately
     const imageBuffer = base64ToArrayBuffer(part.inlineData.data);
 
-    // Return RAW BINARY. Content-Type is standard PNG.
-    // We send dimensions in headers so frontend doesn't need to parse metadata from the binary.
     return new Response(imageBuffer, {
       headers: {
         ...corsHeaders,
