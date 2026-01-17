@@ -145,10 +145,10 @@ export const FreeformGeneratorView: React.FC<FreeformGeneratorViewProps> = ({
       
       {/* 
         LEFT PANEL: CONTROL STATION 
-        Width: 2/3 (66%) - Significantly increased from fixed 600px
+        Width: 80% - Dominant creative space
         Style: Unified dark glass tone
       */}
-      <div className="w-2/3 flex flex-col gap-5 flex-shrink-0">
+      <div className="w-[80%] flex flex-col gap-5 flex-shrink-0">
         <GlassCard noPadding className="h-full flex flex-col bg-black/40 border-white/10 overflow-hidden">
             
             {/* 1. Header & Scrollable Content Container */}
