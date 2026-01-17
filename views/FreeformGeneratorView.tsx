@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GlassCard } from '../components/GlassCard';
 import { Button } from '../components/Button';
 import { AspectRatio, ImageQuality, HistoryItem, ModelProvider } from '../types';
-import { ASPECT_RATIOS, SYNTH_ID_NOTICE, RATIO_LABELS } from '../constants';
+import { ASPECT_RATIOS, RATIO_LABELS } from '../constants';
 import { generateImageBlob, uploadImageBlob, createThumbnail, formatBytes, getDimensions } from '../utils';
 
 // --- Icons & Visual Components ---
